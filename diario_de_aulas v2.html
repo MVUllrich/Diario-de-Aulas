@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2f3d24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Diário de Aula — Auxiliar Veterinário</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><g fill='%235c7a3d'><ellipse cx='12' cy='16.5' rx='4.2' ry='3.4'/><circle cx='6' cy='10' r='2'/><circle cx='10' cy='6.5' r='2'/><circle cx='15' cy='6.5' r='2'/><circle cx='19' cy='10' r='2'/></g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --bg:#f3f5ef; --card:#ffffff; --ink:#1f2718; --muted:#66705d; --line:#e2e6da;
+  --acc:#5c7a3d; --acc-d:#4a6330; --acc-soft:#edf2e4; --acc-line:#cfdcbd;
+  --ok:#3e7c4f; --ok-soft:#e2efe4; --warn:#b45309; --warn-soft:#fdf0dc;
+  --teo:#3b6ea5; --teo-soft:#e3edf6; --pra:#3e7c4f; --pra-soft:#e2efe4; --vis:#6d5ba8; --vis-soft:#ece8f6;
+  --danger:#b3402e; --radius:16px;
+  --shadow:0 1px 2px rgba(28,38,20,.06),0 4px 14px rgba(28,38,20,.05);
+  --shadow-lg:0 8px 30px rgba(28,38,20,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--ink);padding-bottom:calc(78px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.hidden{display:none!important}
+.ic{vertical-align:-3px;flex:none}
+/* ---------- HEADER ---------- */
+header.top{background:linear-gradient(140deg,#26331c,#41562c 60%,#5c7a3d);color:#fff;
+  padding:calc(14px + env(safe-area-inset-top)) 16px 14px;position:sticky;top:0;z-index:20;
+  box-shadow:0 2px 12px rgba(20,28,14,.25)}
+.top-inner{max-width:920px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.brand-mark{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.14);
+  display:flex;align-items:center;justify-content:center;color:#dcebc8;flex:none}
+.brand-txt{flex:1;min-width:0}
+.brand-txt h1{font-size:1.06rem;font-weight:800;letter-spacing:-.2px}
+.brand-txt p{font-size:.72rem;opacity:.78;margin-top:1px;font-weight:500}
+#syncPill{border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.12);color:#fff;
+  border-radius:99px;padding:6px 12px;font-size:.68rem;font-weight:600;font-family:inherit;
+  cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .2s}
+#syncPill:active{background:rgba(255,255,255,.25)}
+#syncPill .dot{width:7px;height:7px;border-radius:50%;background:#c8c8c8;flex:none}
+#syncPill.ok .dot{background:#9fe870}#syncPill.warn .dot{background:#ffd37a}#syncPill.busy .dot{background:#9ecbff;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+main{max-width:920px;margin:0 auto;padding:16px 14px 28px}
+/* ---------- NAV ---------- */
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);display:flex;z-index:30;padding-bottom:env(safe-area-inset-bottom)}
+nav.bottom button{flex:1;background:none;border:none;padding:9px 4px 8px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);
+  font-size:.66rem;font-weight:600;font-family:inherit;letter-spacing:.2px;transition:color .18s}
+nav.bottom button .ic{color:var(--muted);transition:color .18s,transform .18s}
+nav.bottom button.active{color:var(--acc)}
+nav.bottom button.active .ic{color:var(--acc);transform:translateY(-1px)}
+nav.bottom button:active .ic{transform:scale(.9)}
+/* ---------- CARTOES ---------- */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:16px;margin-bottom:12px;border:1px solid rgba(226,230,218,.8);
+  animation:fadeUp .34s ease both;transition:box-shadow .2s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card.flash{animation:flash 1.8s ease}
+@keyframes flash{0%{box-shadow:0 0 0 4px var(--acc-soft)}35%{box-shadow:0 0 0 5px rgba(92,122,61,.5)}100%{box-shadow:var(--shadow)}}
+/* ---------- HERO: AULA DE HOJE ---------- */
+.hero{background:linear-gradient(135deg,#33451f,#5c7a3d);color:#fff;border-radius:var(--radius);
+  padding:18px;margin-bottom:14px;box-shadow:var(--shadow-lg);position:relative;overflow:hidden;
+  animation:fadeUp .34s ease both}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;
+  background:rgba(255,255,255,.07)}
+.hero .kicker{font-size:.66rem;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;opacity:.8;
+  display:flex;align-items:center;gap:6px}
+.hero h2{font-size:1.18rem;font-weight:800;margin:6px 0 2px;letter-spacing:-.3px}
+.hero .meta{font-size:.8rem;opacity:.85;font-weight:500}
+.hero .tema{font-size:.82rem;opacity:.92;margin-top:8px;line-height:1.5}
+.hero .btn{margin-top:14px;background:#fff;color:var(--acc-d);border:none}
+/* ---------- DASHBOARD ---------- */
+.grid-turmas{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:620px){.grid-turmas{grid-template-columns:1fr 1fr}}
+@media(min-width:920px){.grid-turmas{grid-template-columns:repeat(3,1fr)}}
+.turma-card{cursor:pointer;display:flex;flex-direction:column;gap:10px}
+.turma-card:hover{box-shadow:var(--shadow-lg)}
+.turma-card:active{transform:scale(.985)}
+.tc-head b{font-size:.94rem;letter-spacing:-.2px}
+.tc-meta{font-size:.73rem;color:var(--muted);display:block;margin-top:3px;font-weight:500}
+.bar{height:8px;background:#edf0e7;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#8fae63,#5c7a3d);
+  transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.tc-prog{font-size:.75rem;color:var(--muted);font-weight:600}
+.next{background:var(--acc-soft);border:1px solid var(--acc-line);border-radius:12px;padding:10px 12px;font-size:.78rem;line-height:1.45}
+.next b{color:var(--acc-d);font-weight:700}
+.next .nx-tema{color:var(--ink);display:block;margin-top:2px;font-weight:500}
+.next .nx-quando{color:var(--muted);font-size:.72rem;display:block;margin-top:3px;font-weight:500}
+.tc-metrics{display:flex;gap:14px;flex-wrap:wrap;font-size:.71rem;color:var(--muted);font-weight:500}
+.tc-metrics span{display:flex;align-items:center;gap:5px}
+/* ---------- CHIPS ---------- */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:8px 16px;
+  font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;
+  font-family:inherit;transition:all .18s}
+.chip.active{background:var(--acc);border-color:var(--acc);color:#fff}
+.chip:active{transform:scale(.95)}
+/* ---------- AULA ---------- */
+.aula{display:flex;flex-direction:column;gap:10px}
+.aula-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.aula-num{font-weight:800;font-size:.84rem;background:var(--acc-soft);color:var(--acc-d);
+  border-radius:8px;padding:5px 10px;white-space:nowrap;letter-spacing:-.1px}
+.badge{font-size:.66rem;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap;letter-spacing:.3px}
+.badge.teo{background:var(--teo-soft);color:var(--teo)}
+.badge.pra{background:var(--pra-soft);color:var(--pra)}
+.badge.vis{background:var(--vis-soft);color:var(--vis)}
+.btn-status{margin-left:auto;border-radius:99px;padding:7px 14px;font-size:.73rem;font-weight:700;
+  cursor:pointer;white-space:nowrap;font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .2s}
+.btn-status.pend{background:#f4f5f0;color:var(--muted);border:1.5px dashed #ccd3c0}
+.btn-status.done{background:var(--ok-soft);color:var(--ok);border:1.5px solid var(--ok)}
+.btn-status:active{transform:scale(.94)}
+.tema{font-size:.85rem;line-height:1.5;color:#3a4531}
+.row-data{display:flex;align-items:center;gap:8px;font-size:.76rem;color:var(--muted);font-weight:500}
+input[type=date]{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:.83rem;
+  font-family:inherit;color:var(--ink);background:#fff;font-weight:500}
+textarea.obs{width:100%;min-height:66px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;
+  font-size:.84rem;font-family:inherit;color:var(--ink);background:#fafbf8;resize:vertical;line-height:1.5;transition:all .18s}
+textarea.obs:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft);background:#fff}
+textarea.code{width:100%;min-height:84px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+  font-size:.66rem;font-family:ui-monospace,Menlo,monospace;word-break:break-all;background:#fafbf8;color:var(--ink)}
+.fotos{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.foto-thumb{position:relative;width:66px;height:66px;border-radius:11px;overflow:hidden;border:1px solid var(--line)}
+.foto-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.foto-thumb .tag{position:absolute;left:0;bottom:0;right:0;background:rgba(24,32,16,.6);color:#fff;
+  font-size:.56rem;text-align:center;padding:2px;font-weight:600}
+.foto-thumb .del{position:absolute;top:3px;right:3px;width:19px;height:19px;border-radius:50%;border:none;
+  background:rgba(179,64,46,.94);color:#fff;font-size:.62rem;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+.btn-addfoto{border:1.5px dashed var(--acc-line);color:var(--acc);background:var(--acc-soft);border-radius:11px;
+  width:66px;height:66px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s}
+.btn-addfoto:active{transform:scale(.92)}
+/* ---------- GALERIA ---------- */
+.gal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+@media(min-width:620px){.gal-grid{grid-template-columns:repeat(4,1fr)}}
+.gal-item{position:relative;border-radius:13px;overflow:hidden;aspect-ratio:1;border:1px solid var(--line)}
+.gal-item img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.gal-item:active img{transform:scale(1.06)}
+.gal-item .lbl{position:absolute;left:0;right:0;bottom:0;background:rgba(24,32,16,.62);color:#fff;
+  font-size:.62rem;padding:4px 6px;font-weight:500}
+.gal-item .del{position:absolute;top:5px;right:5px;width:23px;height:23px;border-radius:50%;border:none;
+  background:rgba(179,64,46,.94);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.gal-empty{text-align:center;color:var(--muted);padding:44px 16px;font-size:.85rem;line-height:1.7}
+/* ---------- BOTOES / CAMPOS ---------- */
+.sec-title{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+  color:var(--muted);margin:20px 4px 8px}
+.btn{border:none;border-radius:11px;padding:12px 16px;font-size:.85rem;font-weight:700;cursor:pointer;
+  width:100%;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:transform .15s,box-shadow .2s,background .2s}
+.btn:active{transform:scale(.97)}
+.btn-acc{background:var(--acc);color:#fff;box-shadow:0 2px 8px rgba(92,122,61,.35)}
+.btn-acc:hover{background:var(--acc-d)}
+.btn-sec{background:#fff;color:var(--acc-d);border:1.5px solid var(--acc-line)}
+.btn-line{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.btn-danger{background:#fff;color:var(--danger);border:1.5px solid #e5b8af}
+.btn-row{display:flex;gap:9px}.btn-row .btn{flex:1}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+.field label{font-size:.73rem;font-weight:700;color:var(--muted);letter-spacing:.2px}
+.field input,.field select{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.86rem;
+  font-family:inherit;background:#fff;color:var(--ink);font-weight:500;width:100%}
+.field input:focus,.field select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.check{display:flex;align-items:center;gap:9px;font-size:.82rem;margin-bottom:11px;cursor:pointer;font-weight:500}
+.check input{width:18px;height:18px;accent-color:var(--acc)}
+.hint{font-size:.74rem;color:var(--muted);margin-top:7px;line-height:1.55}
+.status-line{display:flex;align-items:center;gap:7px;font-size:.76rem;font-weight:600;margin-bottom:10px}
+.status-line .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.status-line.ok{color:var(--ok)}.status-line.ok .dot{background:var(--ok)}
+.status-line.warn{color:var(--warn)}.status-line.warn .dot{background:var(--warn)}
+.status-line.mut{color:var(--muted)}.status-line.mut .dot{background:#b9c0ae}
+details{border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:11px;background:#fafbf7}
+details summary{font-size:.8rem;font-weight:700;color:var(--muted);cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px}
+details summary::-webkit-details-marker{display:none}
+details[open] summary{margin-bottom:9px}
+details ol{font-size:.76rem;color:var(--muted);line-height:1.7;padding-left:18px}
+details code{background:#eef1e6;padding:1px 5px;border-radius:5px;font-size:.72rem;color:var(--acc-d)}
+/* ---------- MODAL / TOAST ---------- */
+.overlay{position:fixed;inset:0;background:rgba(18,26,12,.5);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@media(min-width:640px){.overlay{align-items:center}}
+.sheet{background:#fff;border-radius:20px 20px 0 0;padding:20px 18px 26px;width:100%;max-width:430px;animation:up .24s cubic-bezier(.2,.8,.2,1)}
+@media(min-width:640px){.sheet{border-radius:20px}}
+@keyframes up{from{transform:translateY(36px);opacity:.3}to{transform:none;opacity:1}}
+.sheet h3{font-size:1rem;margin-bottom:4px;letter-spacing:-.2px}
+.sheet p{font-size:.8rem;color:var(--muted);margin-bottom:15px;line-height:1.5}
+.sheet .btn{margin-bottom:9px}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);
+  background:#1f2718;color:#fff;padding:11px 20px;border-radius:99px;font-size:.8rem;font-weight:600;z-index:60;
+  opacity:0;pointer-events:none;transition:all .28s cubic-bezier(.2,.8,.2,1);max-width:90vw;text-align:center;box-shadow:var(--shadow-lg)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<!-- ÍCONES SVG -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+<symbol id="i-dash" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+<symbol id="i-cam" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+<symbol id="i-paw" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><ellipse cx="12" cy="16.5" rx="4.2" ry="3.4"/><circle cx="6" cy="10" r="2"/><circle cx="10" cy="6.5" r="2"/><circle cx="15" cy="6.5" r="2"/><circle cx="19" cy="10" r="2"/></g></symbol>
+<symbol id="i-g" viewBox="0 0 24 24"><path fill="#4285F4" stroke="none" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.09 3.57-5.16 3.57-8.81z"/><path fill="#34A853" stroke="none" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.87-3c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.29v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" stroke="none" d="M5.29 14.29A7.2 7.2 0 0 1 4.9 12c0-.8.14-1.57.38-2.29v-3.1H1.3A12 12 0 0 0 0 12c0 1.94.46 3.77 1.29 5.38l4-3.09z"/><path fill="#EA4335" stroke="none" d="M12 4.77c1.76 0 3.34.6 4.58 1.8l3.44-3.44A11.98 11.98 0 0 0 12 0 12 12 0 0 0 1.29 6.61l4 3.09c.94-2.85 3.6-4.93 6.71-4.93z"/></symbol>
+</svg>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand-mark"><svg class="ic" width="24" height="24"><use href="#i-paw"/></svg></div>
+    <div class="brand-txt">
+      <h1>Diário de Aula</h1>
+      <p>Auxiliar Veterinário · 5 turmas</p>
+    </div>
+    <button id="syncPill" onclick="irSync()"><span class="dot"></span><span id="syncPillTxt">Offline</span></button>
+  </div>
+</header>
+<main id="app"></main>
+<nav class="bottom">
+  <button data-view="dashboard" class="active"><svg class="ic" width="21" height="21"><use href="#i-dash"/></svg>Visão Geral</button>
+  <button data-view="diario"><svg class="ic" width="21" height="21"><use href="#i-book"/></svg>Diário</button>
+  <button data-view="galeria"><svg class="ic" width="21" height="21"><use href="#i-image"/></svg>Galeria</button>
+  <button data-view="config"><svg class="ic" width="21" height="21"><use href="#i-gear"/></svg>Ajustes</button>
+</nav>
+<div id="modal-root"></div>
+<input type="file" id="fileInput" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="restoreInput" accept="application/json,.json" class="hidden">
+<div id="toast"></div>
+
+<script>
+/* ================= DADOS ================= */
+const CURRICULO=[
+["Bases da Matéria: Anatomia, Fisiologia, Etologia, Patologia, Semiologia, Diagnóstico, Tratamento e integração nas áreas da Veterinária","Teórica"],
+["O cão: anatomia, fisiologia, comportamento, necessidades básicas, alimentação e principais particularidades da espécie","Teórica"],
+["Comportamento e adestramento canino: linguagem corporal, comunicação, socialização, princípios de bem-estar, reforço positivo, comandos básicos, aprendizagem e demonstração prática","Prática"],
+["Prática – Simulação de Consulta: aproximação, contenção, avaliação comportamental e aferição de sinais vitais","Prática"],
+["Visita técnica à faculdade: laboratório de anatomia, consultório, hospital e centro cirúrgico, relacionando os espaços às diferentes áreas da Veterinária","Visita Técnica"],
+["Visita técnica a hospital veterinário: rotina hospitalar, consultas, internação, emergência, diagnóstico, cirurgia e funcionamento da equipe","Visita Técnica"],
+["Visita à Fazendinha e consultório: rotina de um pequeno negócio veterinário + palestra com fisioterapeuta animal e demonstração da medicina integrativa","Visita Técnica"],
+["Fisioterapia veterinária e terapias complementares: princípios, indicações, equipamentos e demonstração prática com especialista","Prática"],
+["O gato: anatomia, fisiologia, comportamento, necessidades ambientais, alimentação e principais diferenças em relação ao cão","Teórica"],
+["Manejo felino: linguagem corporal, estresse, transporte, ambiente, contenção e princípios de manejo de baixo estresse","Teórica"],
+["Prática – Contenção felina: aproximação, retirada da caixa, contenção, toalha, posicionamento e manejo seguro","Prática"],
+["Especialidade felina: principais doenças, rotina clínica e particularidades do atendimento de gatos com especialista","Teórica"],
+["Patologia: conceito de doença, sinais clínicos, dor, febre, inflamação, desidratação e alterações observáveis pelo profissional","Teórica"],
+["Principais doenças: infecciosas (cinomose, parvovirose), parasitárias, autoimunes, crônicas, degenerativas, neoplásicas, genéticas e psíquicas","Teórica"],
+["Medicina Preventiva: como se manter saudável. Cuidados práticos e observações preventivas","Teórica"],
+["Como o veterinário chega ao diagnóstico: anamnese, exame físico, hipóteses, exames complementares e interpretação básica de resultados","Teórica"],
+["Visita técnica a laboratório veterinário: recebimento de amostras, hematologia, bioquímica, microscopia, parasitologia e rotina laboratorial","Visita Técnica"],
+["Visita técnica a centro de exames veterinários: radiografia, ultrassonografia, diagnóstico por imagem","Visita Técnica"],
+["Visita técnica a farmácia de manipulação veterinária: medicamentos, formas farmacêuticas, manipulação e palatabilidade","Visita Técnica"],
+["Prática em Laboratório da Fazendinha: aprender a usar o microscópio e observar lâminas","Prática"],
+["Farmacologia: medicamentos, farmacodinâmica, farmacocinética, princípio ativo, concentração, dose, cálculo, vias de administração, armazenamento e segurança","Teórica"],
+["Prática – Aplicação de medicamentos: preparo, conferência, seringas e agulhas, assepsia, vias de administração, descarte e registro","Prática"],
+["Vacinação e medicina preventiva: imunidade, tipos de vacina, protocolos, cadeia de frio, conservação, aplicação, registro e orientação ao tutor","Prática"],
+["Introdução à cirurgia: tipos de cirurgia, equipe, pré/trans/pós-operatório, anestesia, instrumentação, monitorização e recuperação","Teórica"],
+["Assepsia e paramentação cirúrgica: contaminação, antissepsia, esterilização, lavagem, avental, luvas e campo estéril","Teórica"],
+["Prática – Paramentação cirúrgica: lavagem, paramentação, técnica estéril e montagem de mesa cirúrgica","Prática"],
+["Prática de Sutura: apresentação de fios e instrumentais, técnica correta de agulhamento e pontos cirúrgicos na pele sintética","Prática"],
+["Técnicas cirúrgicas e suturas: diérese, hemostasia, síntese, fios, agulhas, instrumental e princípios de cicatrização + prática inicial","Prática"],
+["Técnicas cirúrgicas e suturas: práticas avançadas de sutura","Prática"],
+["Grande experiência final – cirurgia: acompanhar procedimento cirúrgico, identificação das etapas, equipe, anestesia, técnica e recuperação + fechamento do curso","Prática"]
+];
+const TURMAS=[
+ {id:"lorena_seg",nome:"Lorena - Seg (18h-20h)",curta:"Lorena · Seg",cidade:"Lorena",dia:"Segunda-feira",horario:"18:00 - 20:00"},
+ {id:"guara_sex",nome:"Guará - Sex (19h-21h)",curta:"Guará · Sex",cidade:"Guaratinguetá",dia:"Sexta-feira",horario:"19:00 - 21:00"},
+ {id:"guara_sab09",nome:"Guará - Sáb (09h-11h)",curta:"Guará · Sáb 09h",cidade:"Guaratinguetá",dia:"Sábado",horario:"09:00 - 11:00"},
+ {id:"guara_sab11",nome:"Guará - Sáb (11h-13h)",curta:"Guará · Sáb 11h",cidade:"Guaratinguetá",dia:"Sábado",horario:"11:00 - 13:00"},
+ {id:"lorena_sab15",nome:"Lorena - Sáb (15h-17h)",curta:"Lorena · Sáb",cidade:"Lorena",dia:"Sábado",horario:"15:00 - 17:00"}
+];
+TURMAS.forEach(t=>t.aulas=CURRICULO.map((c,i)=>({n:i+1,tema:c[0],tipo:c[1]})));
+const DIAS={"Domingo":0,"Segunda-feira":1,"Terça-feira":2,"Quarta-feira":3,"Quinta-feira":4,"Sexta-feira":5,"Sábado":6};
+const NOMES_DIAS=["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"];
+const NOMES_MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+
+/* ================= HELPERS ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const pad=v=>String(v).padStart(2,"0");
+const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());};
+const fmtData=iso=>{if(!iso)return "—";const p=iso.split("-");return p[2]+"/"+p[1]+"/"+p[0];};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const trunc=(s,n)=>s.length>n?s.slice(0,n-1)+"…":s;
+const ic=(n,s=18)=>`<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-${n}"/></svg>`;
+const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}};
+let toastT=null;
+function toast(msg){const el=$("#toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2600);}
+function turmaById(id){return TURMAS.find(t=>t.id===id);}
+function getRec(tid,n){return state.turmas[tid].aulas[n]||{status:"Pendente",data:"",obs:"",fotos:[]};}
+function proximaAula(t){for(const a of t.aulas){if(getRec(t.id,a.n).status!=="Realizada")return a;}return null;}
+function progresso(t){let c=0;t.aulas.forEach(a=>{if(getRec(t.id,a.n).status==="Realizada")c++;});return{feitas:c,total:t.aulas.length,pct:Math.round(c/t.aulas.length*100)};}
+function fotosTurma(tid){const t=turmaById(tid);let out=[];t.aulas.forEach(a=>{getRec(tid,a.n).fotos.forEach(f=>out.push({...f,tid}));});return out;}
+function ultimoRegistro(t){let last="";t.aulas.forEach(a=>{const r=getRec(t.id,a.n);if(r.status==="Realizada"&&r.data&&r.data>last)last=r.data;});return last;}
+function realizadasNoMes(t){const ym=todayISO().slice(0,7);let c=0;t.aulas.forEach(a=>{const r=getRec(t.id,a.n);if(r.status==="Realizada"&&r.data&&r.data.slice(0,7)===ym)c++;});return c;}
+
+/* ================= ESTADO ================= */
+const KEY="dav1_state";
+let state=load();
+function defaultState(){const t={};TURMAS.forEach(x=>t[x.id]={aulas:{}});
+ const pre={
+  lorena_seg:{1:{status:"Realizada",data:"2026-10-13",obs:"Repassar conteúdo para outras turmas. Correção: trabalho aplicado."}},
+  guara_sex:{1:{status:"Realizada",data:"",obs:""},2:{status:"Realizada",data:"",obs:"10 grupos. Não falei das patologias."}},
+  guara_sab09:{1:{status:"Realizada",data:"",obs:""}},
+  guara_sab11:{1:{status:"Realizada",data:"",obs:""}},
+  lorena_sab15:{1:{status:"Realizada",data:"",obs:""}}
+ };
+ for(const tid in pre)for(const n in pre[tid]){t[tid].aulas[n]=Object.assign({fotos:[]},pre[tid][n]);}
+ return {v:2,updatedAt:Date.now(),turmas:t};}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.turmas)return s;}catch(e){}return defaultState();}
+function save(){state.updatedAt=Date.now();
+ try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){toast("Armazenamento cheio — apague algumas fotos");}
+ // backup automático a cada 10 alterações
+ try{let bc=parseInt(localStorage.getItem("dav_bcount")||"0",10)+1;
+  if(bc>=10){bc=0;tentarBackup(false);}localStorage.setItem("dav_bcount",String(bc));}catch(e){}
+ agendarSyncAuto();atualizarPill();}
+function touchRec(tid,n,rec){rec.u=Date.now();state.turmas[tid].aulas[n]=rec;save();}
+
+/* ================= BACKUP ================= */
+function nomeBackup(){const d=new Date();return "diario_backup_"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"_"+pad(d.getHours())+pad(d.getMinutes())+".json";}
+function tentarBackup(manual){
+ try{const blob=new Blob([JSON.stringify(state)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=nomeBackup();
+  document.body.appendChild(a);a.click();a.remove();
+  localStorage.setItem("dav_last_backup",String(Date.now()));
+  if(manual)toast("Backup baixado");}catch(e){if(manual)toast("Não foi possível baixar agora");}
+}
+function restaurarBackup(file){const rd=new FileReader();
+ rd.onload=()=>{let inc;try{inc=JSON.parse(rd.result);}catch(e){toast("Arquivo inválido");return;}
+  if(!inc||!inc.turmas){toast("Arquivo inválido");return;}
+  const n=mesclar(inc);save();render();toast(n+" registro(s) restaurado(s)");};
+ rd.readAsText(file);}
+
+/* ================= SINCRONIZAÇÃO GOOGLE DRIVE ================= */
+const G={token:localStorage.getItem("dav_token")||null,tokenExp:parseInt(localStorage.getItem("dav_token_exp")||"0",10),
+ clientId:localStorage.getItem("dav_client_id")||"",fileId:localStorage.getItem("dav_file_id")||"",
+ lastSync:parseInt(localStorage.getItem("dav_last_sync")||"0",10),status:"offline"};
+if(G.token&&Date.now()>G.tokenExp){G.token=null;}
+function gTokenOk(){return G.token&&Date.now()<G.tokenExp;}
+function loadGis(){return new Promise((res,rej)=>{if(window.google&&google.accounts&&google.accounts.oauth2)return res();
+ const s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.onload=res;s.onerror=()=>rej();document.head.appendChild(s);setTimeout(rej,8000);});}
+function conectarGoogle(){
+ if(!navigator.onLine){toast("Sem conexão com a internet");return;}
+ loadGis().then(()=>{
+  const cid=($("#gClientId")?$("#gClientId").value:"").trim();
+  if(!cid){toast("Informe o Client ID (guia no passo a passo)");return;}
+  G.clientId=cid;localStorage.setItem("dav_client_id",cid);
+  G.status="busy";atualizarPill();
+  const tc=google.accounts.oauth2.initTokenClient({client_id:cid,
+   scope:"https://www.googleapis.com/auth/drive.file",
+   callback:async resp=>{
+    if(resp.error){G.status="offline";atualizarPill();toast("Autorização cancelada");return;}
+    G.token=resp.access_token;G.tokenExp=Date.now()+(resp.expires_in-300)*1000;
+    localStorage.setItem("dav_token",G.token);localStorage.setItem("dav_token_exp",String(G.tokenExp));
+    toast("Conta conectada");await syncAgora(true);}});
+  tc.requestAccessToken({prompt:""});
+ }).catch(()=>toast("Não foi possível carregar o login do Google"));}
+async function gapi(path,opts={}){
+ const r=await fetch("https://www.googleapis.com/drive/v3"+path,Object.assign({},opts,
+  {headers:Object.assign({Authorization:"Bearer "+G.token},opts.headers||{})}));
+ if(r.status===401){G.token=null;localStorage.removeItem("dav_token");G.status="expired";atualizarPill();throw{auth:true};}
+ if(!r.ok)throw{status:r.status};return r;}
+async function driveFind(){
+ const q=encodeURIComponent("name='diario_aulas_sync.json' and trashed=false");
+ const r=await gapi("/files?q="+q+"&fields=files(id,modifiedTime)&pageSize=1");
+ const j=await r.json();
+ if(j.files&&j.files.length){G.fileId=j.files[0].id;localStorage.setItem("dav_file_id",G.fileId);return j.files[0];}
+ return null;}
+async function driveDownload(){const f=await driveFind();if(!f)return null;
+ const r=await gapi("/files/"+f.id+"?alt=media");const txt=await r.text();
+ try{return JSON.parse(txt);}catch(e){return null;}}
+async function driveUpload(data){
+ const body=JSON.stringify(data);
+ if(G.fileId){await gapi("/files/"+G.fileId,{method:"PATCH",headers:{"Content-Type":"application/json"},body});return;}
+ const meta={name:"diario_aulas_sync.json",mimeType:"application/json"};
+ const boundary="dav"+Date.now();
+ const multipart="--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+JSON.stringify(meta)+
+  "\r\n--"+boundary+"\r\nContent-Type: application/json\r\n\r\n"+body+"\r\n--"+boundary+"--";
+ const r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{
+  method:"POST",headers:{Authorization:"Bearer "+G.token,"Content-Type":"multipart/related; boundary="+boundary},body:multipart});
+ if(!r.ok)throw{status:r.status};
+ const j=await r.json();G.fileId=j.id;localStorage.setItem("dav_file_id",G.fileId);}
+function mesclar(inc){let novos=0;
+ for(const tid in inc.turmas){if(!state.turmas[tid])state.turmas[tid]={aulas:{}};
+  for(const n in inc.turmas[tid].aulas){const a=inc.turmas[tid].aulas[n];const cur=getRec(tid,n);
+   if((a.u||0)>(cur.u||0)){state.turmas[tid].aulas[n]=a;novos++;}}}
+ return novos;}
+async function syncAgora(manual){
+ if(!gTokenOk()){G.status="expired";atualizarPill();if(manual)toast("Sessão expirada — conecte novamente");return;}
+ if(!navigator.onLine){if(manual)toast("Sem conexão com a internet");return;}
+ G.status="busy";atualizarPill();
+ try{
+  const remote=await driveDownload();
+  if(remote&&remote.turmas)mesclar(remote);
+  await driveUpload(state);
+  G.lastSync=Date.now();localStorage.setItem("dav_last_sync",String(G.lastSync));
+  saveLocalOnly();G.status="ok";atualizarPill();
+  if(manual)toast("Sincronizado com o Google Drive");
+ }catch(e){if(e&&e.auth){/* já tratado */}else{G.status="err";atualizarPill();if(manual)toast("Falha na sincronização — tente novamente");}}
+}
+function saveLocalOnly(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+let syncTimer=null;
+function agendarSyncAuto(){if(!gTokenOk())return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncAgora(false),8000);}
+function desconectarGoogle(){G.token=null;G.status="offline";localStorage.removeItem("dav_token");atualizarPill();renderConfig();toast("Conta desconectada");}
+function irSync(){view="config";render();setTimeout(()=>{const el=$("#secGoogle");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});},80);}
+function fmtHora(ts){const d=new Date(ts);return pad(d.getHours())+":"+pad(d.getMinutes());}
+function atualizarPill(){
+ const pill=$("#syncPill");if(!pill)return;const txt=$("#syncPillTxt");
+ if(G.status==="busy"){pill.className="busy";txt.textContent="Sincronizando…";}
+ else if(gTokenOk()&&G.status==="ok"){pill.className="ok";txt.textContent="Sincronizado "+fmtHora(G.lastSync);}
+ else if(G.status==="expired"){pill.className="warn";txt.textContent="Reconectar";}
+ else{pill.className="";txt.textContent="Não sincronizado";}}
+
+/* ================= NAVEGAÇÃO ================= */
+let view="dashboard",turmaAtual="lorena_seg",galTurma="todas",scrollAula=null;
+document.querySelectorAll("nav.bottom button").forEach(b=>b.addEventListener("click",()=>{buzz(6);view=b.dataset.view;render();window.scrollTo({top:0});}));
+function render(){document.querySelectorAll("nav.bottom button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+ if(view==="dashboard")renderDashboard();else if(view==="diario")renderDiario();else if(view==="galeria")renderGaleria();else renderConfig();atualizarPill();}
+
+/* ================= AULA DE HOJE ================= */
+function proxDataTurma(t,now){const hm=t.horario.split(" - ")[0].split(":");
+ const d=new Date(now);d.setDate(d.getDate()+((DIAS[t.dia]-now.getDay()+7)%7));
+ d.setHours(parseInt(hm[0],10),parseInt(hm[1],10),0,0);
+ if(d<=now)d.setDate(d.getDate()+7);return d;}
+function aulaMaisProxima(){const now=new Date();let best=null;
+ TURMAS.forEach(t=>{const a=proximaAula(t);if(!a)return;const d=proxDataTurma(t,now);
+  if(!best||d.getTime()<best.d.getTime())best={t,a,d};});
+ return best;}
+function relativo(d){const now=new Date();const diff=d.getTime()-now.getTime();
+ if(d.toDateString()===now.toDateString())return "hoje";
+ const dias=Math.round(diff/86400000);if(dias===1)return "amanhã";if(dias<7)return "em "+dias+" dias";
+ return d.getDate()+" de "+NOMES_MES[d.getMonth()];}
+
+/* ================= DASHBOARD ================= */
+function renderDashboard(){
+ const best=aulaMaisProxima();
+ let hero="";
+ if(best){
+  const isHoje=best.d.toDateString()===new Date().toDateString();
+  hero=`<div class="hero">
+   <div class="kicker">${ic("cal",14)} ${isHoje?"Aula de hoje":"Próxima aula"}</div>
+   <h2>${esc(best.t.nome)}</h2>
+   <div class="meta">${NOMES_DIAS[best.d.getDay()]}, ${best.d.getDate()}/${pad(best.d.getMonth()+1)} às ${best.t.horario.split(" - ")[0]} · ${relativo(best.d)}</div>
+   <div class="tema"><b>Aula ${best.a.n}:</b> ${esc(trunc(best.a.tema,110))}</div>
+   <button class="btn" onclick="abrirRegistro('${best.t.id}',${best.a.n})">${ic("chev",17)} ${isHoje?"Registrar esta aula":"Abrir no diário"}</button>
+  </div>`;}
+ let cards=TURMAS.map((t,i)=>{
+  const p=progresso(t),prox=proximaAula(t);
+  const proxHtml=prox?`<b>Próxima aula: ${prox.n}</b><span class="nx-tema">${esc(trunc(prox.tema,72))}</span><span class="nx-quando">${ic("clock",13)} ${t.dia} · ${t.horario}</span>`:`Curso concluído`;
+  return `<div class="card turma-card" style="animation-delay:${i*0.05}s" onclick="abrirTurma('${t.id}')">
+   <div class="tc-head"><b>${esc(t.nome)}</b><span class="tc-meta">${esc(t.cidade)} · ${t.dia} · ${t.horario}</span></div>
+   <div class="bar"><i style="width:${p.pct}%"></i></div>
+   <div class="tc-prog">${p.feitas}/${p.total} aulas · ${p.pct}%</div>
+   <div class="next">${proxHtml}</div>
+   <div class="tc-metrics">
+    <span>${ic("cal",14)} ${realizadasNoMes(t)} este mês</span>
+    <span>${ic("cam",14)} ${fotosTurma(t.id).length} fotos</span>
+    <span>${ic("check",14)} último: ${fmtData(ultimoRegistro(t))}</span>
+   </div>
+  </div>`;}).join("");
+ $("#app").innerHTML=hero+`<div class="grid-turmas">${cards}</div>`;
+}
+function abrirTurma(tid){buzz(6);turmaAtual=tid;view="diario";render();}
+function abrirRegistro(tid,n){buzz(10);turmaAtual=tid;view="diario";scrollAula=n;render();}
+
+/* ================= DIÁRIO ================= */
+function renderDiario(){
+ const t=turmaById(turmaAtual);
+ const chips=TURMAS.map(x=>`<button class="chip ${x.id===turmaAtual?"active":""}" onclick="selTurma('${x.id}')">${esc(x.curta)}</button>`).join("");
+ const lista=t.aulas.map((a,i)=>{
+  const r=getRec(t.id,a.n),done=r.status==="Realizada";
+  const fotos=(r.fotos||[]).map(f=>`<div class="foto-thumb"><img src="${f.src}"><span class="tag">${f.ctx==="geral"?"Geral":"Aula "+f.aulaN}</span><button class="del" onclick="delFoto('${t.id}',${a.n},'${f.id}')">${ic("x",11)}</button></div>`).join("");
+  return `<div class="card aula" id="aula-${a.n}" style="animation-delay:${Math.min(i*0.03,0.4)}s">
+   <div class="aula-top">
+    <span class="aula-num">Aula ${a.n}</span>
+    <span class="badge ${a.tipo==="Teórica"?"teo":(a.tipo==="Prática"?"pra":"vis")}">${a.tipo}</span>
+    <button class="btn-status ${done?"done":"pend"}" onclick="toggleStatus('${t.id}',${a.n})">${done?ic("check",14)+" Realizada":"Pendente"}</button>
+   </div>
+   <div class="tema">${esc(a.tema)}</div>
+   <div class="row-data"><span>Data</span><input type="date" value="${r.data||""}" onchange="setData('${t.id}',${a.n},this.value)"></div>
+   <textarea class="obs" placeholder="Observações sobre como o conteúdo foi ministrado…" oninput="setObs('${t.id}',${a.n},this.value)">${esc(r.obs)}</textarea>
+   <div class="fotos">${fotos}<button class="btn-addfoto" onclick="abrirModalFoto('${t.id}',${a.n})">${ic("cam",22)}</button></div>
+  </div>`;}).join("");
+ $("#app").innerHTML=`<div class="chips">${chips}</div>${lista}`;
+ if(scrollAula){const n=scrollAula;scrollAula=null;
+  setTimeout(()=>{const el=document.getElementById("aula-"+n);
+   if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");
+    const r=getRec(turmaAtual,n);if(r.status!=="Realizada"){} }},120);}
+}
+function selTurma(tid){buzz(6);turmaAtual=tid;render();}
+function toggleStatus(tid,n){const r=getRec(tid,n);
+ if(r.status!=="Realizada"){r.status="Realizada";if(!r.data)r.data=todayISO();buzz([12,40,12]);}
+ else{r.status="Pendente";buzz(8);}
+ touchRec(tid,n,r);renderDiario();toast(r.status==="Realizada"?"Aula "+n+" registrada":"Aula "+n+" voltou para pendente");}
+let obsTimer=null;
+function setObs(tid,n,val){const r=getRec(tid,n);r.obs=val;state.turmas[tid].aulas[n]=r;clearTimeout(obsTimer);obsTimer=setTimeout(save,500);}
+function setData(tid,n,val){const r=getRec(tid,n);r.data=val;touchRec(tid,n,r);}
+
+/* ================= FOTOS ================= */
+let pendingFoto=null;
+function abrirModalFoto(tid,n){buzz(6);pendingFoto={tid,n};
+ $("#modal-root").innerHTML=`<div class="overlay" onclick="fecharModal()">
+  <div class="sheet" onclick="event.stopPropagation()">
+   <h3>Anexar foto</h3>
+   <p>Vincule a foto a esta aula ou envie para a galeria geral da turma.</p>
+   <button class="btn btn-acc" onclick="escolherCtx('aula')">${ic("file",17)} Vincular à Aula ${n}</button>
+   <button class="btn btn-sec" onclick="escolherCtx('geral')">${ic("image",17)} Galeria da turma</button>
+   <button class="btn btn-line" onclick="fecharModal()">Cancelar</button>
+  </div></div>`;}
+function escolherCtx(ctx){pendingFoto.ctx=ctx;fecharModal();$("#fileInput").click();}
+function fecharModal(){$("#modal-root").innerHTML="";}
+$("#fileInput").addEventListener("change",async e=>{
+ const file=e.target.files[0];e.target.value="";if(!file||!pendingFoto)return;
+ const src=await comprimirFoto(file);
+ const r=getRec(pendingFoto.tid,pendingFoto.n);
+ r.fotos=r.fotos||[];r.fotos.push({id:uid(),src,ctx:pendingFoto.ctx,aulaN:pendingFoto.ctx==="aula"?pendingFoto.n:null});
+ touchRec(pendingFoto.tid,pendingFoto.n,r);buzz(10);renderDiario();toast("Foto anexada");});
+function comprimirFoto(file){return new Promise(res=>{const img=new Image();const url=URL.createObjectURL(file);
+ img.onload=()=>{const max=1280,sc=Math.min(1,max/Math.max(img.width,img.height));
+  const w=Math.round(img.width*sc),h=Math.round(img.height*sc);
+  const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
+  URL.revokeObjectURL(url);res(c.toDataURL("image/jpeg",0.72));};img.src=url;});}
+function delFoto(tid,n,fid){if(!confirm("Apagar esta foto?"))return;const r=getRec(tid,n);r.fotos=r.fotos.filter(f=>f.id!==fid);touchRec(tid,n,r);render();}
+
+/* ================= GALERIA ================= */
+function renderGaleria(){
+ const chips=`<button class="chip ${galTurma==="todas"?"active":""}" onclick="selGal('todas')">Todas</button>`+
+  TURMAS.map(x=>`<button class="chip ${galTurma===x.id?"active":""}" onclick="selGal('${x.id}')">${esc(x.curta)}</button>`).join("");
+ let items=[];
+ TURMAS.filter(t=>galTurma==="todas"||t.id===galTurma).forEach(t=>{
+  t.aulas.forEach(a=>{getRec(t.id,a.n).fotos.forEach(f=>items.push({...f,turma:t.curta,tid:t.id,aula:a.n}));});});
+ const grid=items.length?`<div class="gal-grid">${items.map(f=>`
+   <div class="gal-item"><img src="${f.src}">
+    <span class="lbl">${esc(f.turma)} · ${f.ctx==="geral"?"Geral":"Aula "+f.aulaN}</span>
+    <button class="del" onclick="delFoto('${f.tid}',${f.aula},'${f.id}')">${ic("x",12)}</button>
+   </div>`).join("")}</div>`
+  :`<div class="gal-empty">Nenhuma foto ainda.<br>Anexe fotos pelo diário de cada aula.</div>`;
+ $("#app").innerHTML=`<div class="chips">${chips}</div>${grid}`;
+}
+function selGal(v){buzz(6);galTurma=v;renderGaleria();}
+
+/* ================= SINCRONIZAÇÃO MANUAL (fallback) ================= */
+function gerarCodigo(){
+ const incluiFotos=$("#chkFotosSync").checked;
+ let payload=JSON.parse(JSON.stringify(state));
+ if(!incluiFotos){for(const tid in payload.turmas)for(const n in payload.turmas[tid].aulas)payload.turmas[tid].aulas[n].fotos=[];}
+ const json=JSON.stringify(payload);
+ let code="DAV1."+json;
+ if(window.LZString){try{code="DAV1."+LZString.compressToBase64(json);}catch(e){}}
+ $("#codeOut").value=code;
+ $("#codeInfo").textContent="Código gerado ("+Math.round(code.length/1024)+" KB). Copie e envie para o outro aparelho.";
+ $("#codeOut").classList.remove("hidden");$("#codeInfo").classList.remove("hidden");toast("Código gerado");}
+function copiarCodigo(){$("#codeOut").select();if(navigator.clipboard)navigator.clipboard.writeText($("#codeOut").value);document.execCommand("copy");toast("Código copiado");}
+function importarCodigo(){
+ const raw=$("#codeIn").value.trim();if(!raw)return;let json=null;
+ try{if(raw.startsWith("DAV1.")&&window.LZString){json=LZString.decompressFromBase64(raw.slice(5));if(!json)throw 0;}
+ else if(raw.startsWith("DAV1.")){json=raw.slice(5);}else{json=raw;}}catch(e){toast("Código inválido");return;}
+ let inc;try{inc=JSON.parse(json);}catch(e){toast("Código inválido");return;}
+ if(!inc||!inc.turmas){toast("Código inválido");return;}
+ const novos=mesclar(inc);save();$("#codeIn").value="";toast(novos+" registro(s) importado(s)");render();}
+
+/* ================= EXPORTAR ================= */
+function turmasExport(){const v=$("#expTurma").value;return v==="todas"?TURMAS:[turmaById(v)];}
+function filtraPeriodo(t){const comp=$("#expCompleto").checked;if(comp)return t.aulas;
+ const de=$("#expDe").value,ate=$("#expAte").value;
+ return t.aulas.filter(a=>{const d=getRec(t.id,a.n).data;if(!d)return false;
+  if(de&&d<de)return false;if(ate&&d>ate)return false;return true;});}
+function periodoLabel(){const comp=$("#expCompleto").checked;if(comp)return "Diário completo";
+ const de=$("#expDe").value,ate=$("#expAte").value;
+ if(!de&&!ate)return "Diário completo";return "Período: "+(de?fmtData(de):"início")+" a "+(ate?fmtData(ate):"hoje");}
+function expExcel(){
+ if(typeof XLSX==="undefined"){toast("Sem internet — biblioteca não carregada");return;}
+ const wb=XLSX.utils.book_new();
+ const resumo=TURMAS.map(t=>{const p=progresso(t),px=proximaAula(t);
+  return {"Turma":t.nome,"Cidade":t.cidade,"Dia/Horário":t.dia+" "+t.horario,"Realizadas":p.feitas,"Total":p.total,"%":p.pct,
+   "Próxima Aula":px?("Aula "+px.n+" — "+trunc(px.tema,60)):"Concluído"};});
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(resumo),"Resumo");
+ turmasExport().forEach(t=>{const rows=filtraPeriodo(t).map(a=>{const r=getRec(t.id,a.n);
+   return {"Aula":a.n,"Tema":a.tema,"Tipo":a.tipo,"Data":fmtData(r.data),"Status":r.status,"Observações":r.obs,"Fotos":(r.fotos||[]).length};});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),t.curta.replace(/·/g,"-").slice(0,31));});
+ XLSX.writeFile(wb,"diario_aulas_"+todayISO()+".xlsx");toast("Excel exportado");}
+function expPDF(){
+ if(!window.jspdf){toast("Sem internet — biblioteca não carregada");return;}
+ const {jsPDF}=window.jspdf;const doc=new jsPDF();
+ turmasExport().forEach((t,i)=>{if(i>0)doc.addPage();
+  doc.setFontSize(13);doc.setTextColor(31,39,24);doc.text("Diário de Classe — "+t.nome,14,16);
+  doc.setFontSize(9);doc.setTextColor(102,112,93);
+  doc.text("Cidade: "+t.cidade+"   |   "+t.dia+" "+t.horario+"   |   "+periodoLabel(),14,22);
+  const body=filtraPeriodo(t).map(a=>{const r=getRec(t.id,a.n);
+   return [a.n,trunc(a.tema,90),a.tipo,fmtData(r.data),r.status==="Realizada"?"Sim":"—",(r.obs||"").replace(/\n/g," ").slice(0,140)];});
+  doc.autoTable({startY:27,head:[["Aula","Tema","Tipo","Data","Realizada","Observações"]],body:body,
+   styles:{fontSize:7.2,cellPadding:1.6,textColor:[40,45,36]},
+   headStyles:{fillColor:[92,122,61],textColor:255,fontSize:7.6},
+   alternateRowStyles:{fillColor:[246,248,243]},
+   columnStyles:{0:{cellWidth:11},1:{cellWidth:66},2:{cellWidth:24},3:{cellWidth:20},4:{cellWidth:18},5:{cellWidth:41}}});
+  doc.setFontSize(8);doc.setTextColor(150,155,145);
+  doc.text("Professor(a): ______________________________     Coordenação: ______________________________     Data: ____/____/______",14,doc.lastAutoTable.finalY+14);
+ });
+ doc.save("diario_aulas_"+todayISO()+".pdf");toast("PDF exportado");}
+function togglePeriodo(){const comp=$("#expCompleto").checked;$("#expDatasRow").style.display=comp?"none":"flex";}
+function apagarTudo(){if(confirm("Tem certeza? Todos os dados deste aparelho serão apagados.")){localStorage.removeItem(KEY);state=defaultState();save();render();toast("Dados apagados");}}
+
+/* ================= CONFIG ================= */
+function renderConfig(){
+ const opts=`<option value="todas">Todas as turmas</option>`+TURMAS.map(t=>`<option value="${t.id}">${esc(t.nome)}</option>`).join("");
+ const conectado=gTokenOk();
+ const lastBk=parseInt(localStorage.getItem("dav_last_backup")||"0",10);
+ $("#app").innerHTML=`
+  <div id="secGoogle"></div>
+  <div class="sec-title">Sincronização automática — Google Drive</div>
+  <div class="card">
+   <div class="status-line ${conectado?"ok":"mut"}"><span class="dot"></span>
+    ${conectado?"Conta conectada — os dados sincronizam sozinhos":"Não conectado"}</div>
+   <div class="field"><label>Client ID do Google Cloud</label>
+    <input type="text" id="gClientId" value="${esc(G.clientId)}" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>
+   <details><summary>${ic("chev",15)} Como conseguir meu Client ID (uma única vez, ~10 min)</summary>
+    <ol>
+     <li>Acesse <code>console.cloud.google.com</code> e crie um projeto novo (nome livre).</li>
+     <li>Em <b>APIs e Serviços → Tela de permissão OAuth</b>, escolha <b>Externo</b> e preencha só o nome e seu e-mail.</li>
+     <li>Em <b>APIs e Serviços → Biblioteca</b>, ative a <b>Google Drive API</b>.</li>
+     <li>Em <b>Credenciais → Criar Credencial → ID do Cliente OAuth</b>, escolha <b>Aplicativo da Web</b>.</li>
+     <li>Em <b>Origens JavaScript autorizadas</b>, adicione a URL onde o app está hospedado (ex.: sua GitHub Pages) e <code>http://localhost:8000</code> para testes.</li>
+     <li>Copie o <b>Client ID</b> e cole no campo acima.</li>
+    </ol>
+   </details>
+   <p class="hint" style="margin-top:2px">O app salva um arquivo <code>diario_aulas_sync.json</code> no seu Google Drive. Só você tem acesso. Para hospedar gratuitamente: crie um repositório no GitHub, envie este arquivo como <code>index.html</code> e ative o GitHub Pages em Configurações — assim o login Google funciona em qualquer aparelho.</p>
+   ${conectado?
+    `<div class="btn-row" style="margin-top:10px">
+      <button class="btn btn-acc" onclick="syncAgora(true)">${ic("refresh",17)} Sincronizar agora</button>
+      <button class="btn btn-line" onclick="desconectarGoogle()">Desconectar</button>
+     </div>`:
+    `<button class="btn btn-acc" style="margin-top:10px" onclick="conectarGoogle()">${ic("g",18)} Conectar com o Google</button>`}
+  </div>
+  <div class="sec-title">Sincronização manual (alternativa sem login)</div>
+  <div class="card">
+   <label class="check"><input type="checkbox" id="chkFotosSync" checked> Incluir fotos no código</label>
+   <button class="btn btn-sec" onclick="gerarCodigo()">${ic("up",17)} Gerar código deste aparelho</button>
+   <textarea id="codeOut" class="code hidden" readonly></textarea>
+   <div id="codeInfo" class="hint hidden"></div>
+   <button class="btn btn-line" style="margin-top:8px" onclick="copiarCodigo()">Copiar código</button>
+   <div class="field" style="margin-top:12px"><label>Cole o código de outro aparelho</label>
+   <textarea id="codeIn" class="code" placeholder="DAV1.…"></textarea></div>
+   <button class="btn btn-sec" onclick="importarCodigo()">${ic("down",17)} Importar e mesclar</button>
+  </div>
+  <div class="sec-title">Exportar</div>
+  <div class="card">
+   <div class="field"><label>Turma</label><select id="expTurma">${opts}</select></div>
+   <label class="check"><input type="checkbox" id="expCompleto" checked onchange="togglePeriodo()"> Diário completo (ignorar período)</label>
+   <div class="btn-row" id="expDatasRow" style="display:none">
+    <div class="field" style="flex:1"><label>De</label><input type="date" id="expDe"></div>
+    <div class="field" style="flex:1"><label>Até</label><input type="date" id="expAte"></div>
+   </div>
+   <div class="btn-row">
+    <button class="btn btn-acc" onclick="expExcel()">${ic("file",17)} Excel</button>
+    <button class="btn btn-sec" onclick="expPDF()">${ic("file",17)} PDF</button>
+   </div>
+   <p class="hint">O PDF inclui linhas de assinatura do professor e da coordenação, prontas para imprimir.</p>
+  </div>
+  <div class="sec-title">Backup e dados</div>
+  <div class="card">
+   <p class="hint" style="margin-top:0">Um backup em JSON é baixado automaticamente a cada 10 alterações. Último backup: ${lastBk?fmtData(new Date(lastBk).toISOString().slice(0,10))+" às "+fmtHora(lastBk):"nenhum ainda"}</p>
+   <div class="btn-row" style="margin-top:10px">
+    <button class="btn btn-sec" onclick="tentarBackup(true)">${ic("shield",17)} Baixar backup agora</button>
+    <button class="btn btn-line" onclick="$('#restoreInput').click()">${ic("up",17)} Restaurar backup</button>
+   </div>
+   <p class="hint" id="storageInfo" style="margin-top:10px"></p>
+   <button class="btn btn-danger" style="margin-top:10px" onclick="apagarTudo()">Apagar todos os dados deste aparelho</button>
+  </div>
+  <div class="sec-title">Instalar como aplicativo</div>
+  <div class="card"><p class="hint" style="margin-top:0">No Chrome do celular, toque no menu ⋮ e escolha <b>Adicionar à tela inicial</b>. O app abre em tela cheia, com este mesmo visual. Funciona offline após o primeiro acesso.</p></div>`;
+ togglePeriodo();
+ if(navigator.storage&&navigator.storage.estimate){navigator.storage.estimate().then(e=>{
+  const el=$("#storageInfo");if(el)el.textContent="Armazenamento usado neste aparelho: ~"+Math.round((e.usage||0)/1024)+" KB.";});}
+}
+$("#restoreInput").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)restaurarBackup(f);});
+
+/* ================= INIT ================= */
+render();
+</script>
+</body>
+</html>
