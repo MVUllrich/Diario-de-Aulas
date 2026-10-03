@@ -450,18 +450,47 @@ async function driveUpload(data){
   method:"POST",headers:{Authorization:"Bearer "+G.token,"Content-Type":"multipart/related; boundary="+boundary},body:multipart});
  if(!r.ok)throw{status:r.status};
  const j=await r.json();G.fileId=j.id;localStorage.setItem("dav_file_id",G.fileId);}
+function mergeRecord(cur,remote){
+ const c=cur?JSON.parse(JSON.stringify(cur)):{status:"Pendente",datas:[],fotos:[]};
+ const r=remote?JSON.parse(JSON.stringify(remote)):{status:"Pendente",datas:[],fotos:[]};
+ c.datas=Array.isArray(c.datas)?c.datas:[]; r.datas=Array.isArray(r.datas)?r.datas:[];
+ c.fotos=Array.isArray(c.fotos)?c.fotos:[]; r.fotos=Array.isArray(r.fotos)?r.fotos:[];
+ const cu=Number(c.u||0), ru=Number(r.u||0);
+ if(ru>=cu && r.status)c.status=r.status;
+ c.u=Math.max(cu,ru);
+ const byId=new Map(c.datas.map((d,i)=>[d.id||("legacy_"+i),d]));
+ r.datas.forEach((rd,idx)=>{
+  const key=rd.id||("remote_"+idx+"_"+(rd.data||"")); let ld=byId.get(key);
+  if(!ld){ld={id:rd.id||uid(),data:rd.data||"",obs:rd.obs||"",fotos:[],u:Number(rd.u||ru||Date.now())};c.datas.push(ld);byId.set(key,ld);}
+  const lu=Number(ld.u||0), du=Number(rd.u||ru||0);
+  if(!ld.data&&rd.data)ld.data=rd.data; else if(du>lu&&rd.data)ld.data=rd.data;
+  if(!ld.obs&&rd.obs)ld.obs=rd.obs;
+  else if(rd.obs&&ld.obs!==rd.obs&&du>lu)ld.obs=rd.obs;
+  else if(rd.obs&&ld.obs!==rd.obs&&ld.obs.indexOf(rd.obs)<0&&rd.obs.indexOf(ld.obs)<0)ld.obs=ld.obs+"\n\n[Registro recuperado] "+rd.obs;
+  ld.u=Math.max(lu,du);
+  const photos=new Map((ld.fotos||[]).map(f=>[f.id||f.src,f]));
+  (rd.fotos||[]).forEach(f=>{const k=f.id||f.src;if(!photos.has(k))photos.set(k,f);});
+  ld.fotos=[...photos.values()];
+ });
+ const photos=new Map(c.fotos.map(f=>[f.id||f.src,f])); r.fotos.forEach(f=>{const k=f.id||f.src;if(!photos.has(k))photos.set(k,f);}); c.fotos=[...photos.values()];
+ return c;
+}
+function salvarSnapshotSeguro(tag="antes-sync"){try{const raw=JSON.stringify(state);const packed=window.LZString?LZString.compressToBase64(raw):raw;const key="dav_safe_"+Date.now();localStorage.setItem(key,packed);const keys=Object.keys(localStorage).filter(k=>k.startsWith("dav_safe_")).sort();while(keys.length>3)localStorage.removeItem(keys.shift());localStorage.setItem("dav_safe_last",key);localStorage.setItem("dav_safe_tag",tag);}catch(e){}}
 function mesclar(inc){let novos=0;
- inc=normalizarEstado(inc);
+ inc=normalizarEstado(JSON.parse(JSON.stringify(inc)));
  if((inc.cronogramaU||0)>(state.cronogramaU||0)){state.cronograma=inc.cronograma;state.cronogramaU=inc.cronogramaU;novos++;}
  for(const tid in inc.turmas){if(!state.turmas[tid])state.turmas[tid]={aulas:{}};
-  for(const id in inc.turmas[tid].aulas){const a=inc.turmas[tid].aulas[id];const cur=getRec(tid,id);
-   if((a.u||0)>(cur.u||0)){state.turmas[tid].aulas[id]=a;novos++;}}}
+  for(const id in inc.turmas[tid].aulas){const remote=inc.turmas[tid].aulas[id];const cur=state.turmas[tid].aulas[id]||null;
+   const before=JSON.stringify(cur||null); const merged=mergeRecord(cur,remote);
+   if(JSON.stringify(merged)!==before){state.turmas[tid].aulas[id]=merged;novos++;}
+  }}
  return novos;}
 async function syncAgora(manual){
  if(!gTokenOk()){G.status="expired";atualizarPill();if(manual)toast("Sessão expirada — conecte novamente");return;}
  if(!navigator.onLine){if(manual)toast("Sem conexão com a internet");return;}
  G.status="busy";atualizarPill();
  try{
+  salvarSnapshotSeguro("antes-google-sync");
   const remote=await driveDownload();
   if(remote&&remote.turmas)mesclar(remote);
   await driveUpload(state);
@@ -570,11 +599,11 @@ function toggleStatus(tid,id){const r=getRec(tid,id);const tema=aulasDaTurmaGlob
  else if(r.status==="Em andamento"){r.status="Realizada";if(!(r.datas||[]).some(d=>d.data)){r.datas=[{id:uid(),data:todayISO(),obs:"",fotos:[]}];}buzz([12,40,12]);}
  else{r.status="Pendente";buzz(8);}
  touchRec(tid,id,r);renderDiario();toast(r.status==="Realizada"?"Aula "+(tema?tema.n:"")+" registrada":r.status==="Em andamento"?"Aula em andamento":"Aula voltou para pendente");}
-function adicionarData(tid,id){const r=getRec(tid,id);r.datas=r.datas||[];r.datas.push({id:uid(),data:todayISO(),obs:"",fotos:[]});if(r.status==="Pendente")r.status="Em andamento";touchRec(tid,id,r);renderDiario();}
+function adicionarData(tid,id){const r=getRec(tid,id);r.datas=r.datas||[];r.datas.push({id:uid(),data:todayISO(),obs:"",fotos:[],u:Date.now()});if(r.status==="Pendente")r.status="Em andamento";touchRec(tid,id,r);renderDiario();}
 function removerData(tid,id,di){const r=getRec(tid,id);if(!r.datas||!r.datas[di])return;if(!confirm("Excluir esta data e suas observações e fotos?"))return;r.datas.splice(di,1);if(!r.datas.length&&r.status==="Em andamento")r.status="Pendente";touchRec(tid,id,r);renderDiario();}
 let obsTimer=null;
-function setObs(tid,id,di,val){const r=getRec(tid,id);if(!r.datas||!r.datas[di])return;r.datas[di].obs=val;state.turmas[tid].aulas[id]=r;clearTimeout(obsTimer);obsTimer=setTimeout(save,500);}
-function setData(tid,id,di,val){const r=getRec(tid,id);if(!r.datas||!r.datas[di])return;r.datas[di].data=val;touchRec(tid,id,r);renderDiario();}
+function setObs(tid,id,di,val){const r=getRec(tid,id);if(!r.datas||!r.datas[di])return;r.datas[di].obs=val;r.datas[di].u=Date.now();state.turmas[tid].aulas[id]=r;clearTimeout(obsTimer);obsTimer=setTimeout(save,500);}
+function setData(tid,id,di,val){const r=getRec(tid,id);if(!r.datas||!r.datas[di])return;r.datas[di].data=val;r.datas[di].u=Date.now();touchRec(tid,id,r);renderDiario();}
 
 /* ================= FOTOS ================= */
 let pendingFoto=null;
