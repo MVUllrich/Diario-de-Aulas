@@ -141,6 +141,26 @@ textarea.code{width:100%;min-height:84px;border:1px solid var(--line);border-rad
 .btn-addfoto{border:1.5px dashed var(--acc-line);color:var(--acc);background:var(--acc-soft);border-radius:11px;
   width:66px;height:66px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s}
 .btn-addfoto:active{transform:scale(.92)}
+/* ---------- DATAS DA AULA ---------- */
+.aula-datas{display:flex;flex-direction:column;gap:10px;margin-top:2px}
+.data-bloco{border:1px solid var(--line);border-radius:13px;background:#fafbf8;padding:12px}
+.data-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.data-head b{font-size:.75rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.data-head .btn-mini{margin-left:auto}
+.data-bloco textarea.obs{background:#fff}
+.btn-mini{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:6px 8px;font:600 .68rem Inter,sans-serif;cursor:pointer}
+.btn-mini.danger{color:var(--danger);border-color:#e5b8af}
+.btn-adddata{border:1.5px dashed var(--acc-line);background:var(--acc-soft);color:var(--acc-d);border-radius:11px;padding:10px 12px;font:700 .76rem Inter,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.aula-status-help{font-size:.7rem;color:var(--muted);line-height:1.45}
+/* ---------- CRONOGRAMA ---------- */
+.crono-list{display:flex;flex-direction:column;gap:9px}
+.crono-item{border:1px solid var(--line);border-radius:13px;background:#fff;padding:12px}
+.crono-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.crono-num{width:34px;height:34px;border-radius:9px;background:var(--acc-soft);color:var(--acc-d);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;flex:none}
+.crono-actions{display:flex;gap:5px;margin-left:auto}
+.crono-actions .btn-mini{padding:7px 8px}
+.crono-item .field{margin-bottom:8px}
+.crono-save{margin-top:12px}
 /* ---------- GALERIA ---------- */
 .gal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 @media(min-width:620px){.gal-grid{grid-template-columns:repeat(4,1fr)}}
@@ -286,7 +306,9 @@ const TURMAS=[
  {id:"guara_sab11",nome:"Guará - Sáb (11h-13h)",curta:"Guará · Sáb 11h",cidade:"Guaratinguetá",dia:"Sábado",horario:"11:00 - 13:00"},
  {id:"lorena_sab15",nome:"Lorena - Sáb (15h-17h)",curta:"Lorena · Sáb",cidade:"Lorena",dia:"Sábado",horario:"15:00 - 17:00"}
 ];
-TURMAS.forEach(t=>t.aulas=CURRICULO.map((c,i)=>({n:i+1,tema:c[0],tipo:c[1]})));
+const CRONOGRAMA_INICIAL=CURRICULO.map((c,i)=>({id:"a"+(i+1),tema:c[0],tipo:c[1]}));
+function cronogramaAtual(){return state&&state.cronograma&&state.cronograma.length?state.cronograma:CRONOGRAMA_INICIAL;}
+function aulasDaTurma(){return cronogramaAtual().map((a,i)=>({...a,n:i+1}));}
 const DIAS={"Domingo":0,"Segunda-feira":1,"Terça-feira":2,"Quarta-feira":3,"Quinta-feira":4,"Sexta-feira":5,"Sábado":6};
 const NOMES_DIAS=["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"];
 const NOMES_MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
@@ -304,17 +326,46 @@ const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}};
 let toastT=null;
 function toast(msg){const el=$("#toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2600);}
 function turmaById(id){return TURMAS.find(t=>t.id===id);}
-function getRec(tid,n){return state.turmas[tid].aulas[n]||{status:"Pendente",data:"",obs:"",fotos:[]};}
-function proximaAula(t){for(const a of t.aulas){if(getRec(t.id,a.n).status!=="Realizada")return a;}return null;}
-function progresso(t){let c=0;t.aulas.forEach(a=>{if(getRec(t.id,a.n).status==="Realizada")c++;});return{feitas:c,total:t.aulas.length,pct:Math.round(c/t.aulas.length*100)};}
-function fotosTurma(tid){const t=turmaById(tid);let out=[];t.aulas.forEach(a=>{getRec(tid,a.n).fotos.forEach(f=>out.push({...f,tid}));});return out;}
-function ultimoRegistro(t){let last="";t.aulas.forEach(a=>{const r=getRec(t.id,a.n);if(r.status==="Realizada"&&r.data&&r.data>last)last=r.data;});return last;}
-function realizadasNoMes(t){const ym=todayISO().slice(0,7);let c=0;t.aulas.forEach(a=>{const r=getRec(t.id,a.n);if(r.status==="Realizada"&&r.data&&r.data.slice(0,7)===ym)c++;});return c;}
+function getRec(tid,id){return state.turmas[tid].aulas[id]||{status:"Pendente",datas:[],fotos:[]};}
+function aulasDaTurma(t){return aulasDaTurmaGlobal();}
+function aulasDaTurmaGlobal(){return cronogramaAtual().map((a,i)=>({...a,n:i+1}));}
+function proximaAula(t){for(const a of aulasDaTurmaGlobal()){if(getRec(t.id,a.id).status!=="Realizada")return a;}return null;}
+function progresso(t){const aulas=aulasDaTurmaGlobal();let c=0;aulas.forEach(a=>{if(getRec(t.id,a.id).status==="Realizada")c++;});return{feitas:c,total:aulas.length,pct:aulas.length?Math.round(c/aulas.length*100):0};}
+function fotosTurma(tid){const t=turmaById(tid);let out=[];aulasDaTurmaGlobal().forEach(a=>{const r=getRec(tid,a.id);(r.fotos||[]).forEach(f=>out.push({...f,tid,aula:a.n}));(r.datas||[]).forEach(d=>(d.fotos||[]).forEach(f=>out.push({...f,tid,aula:a.n,data:d.data})));});return out;}
+function todasDatas(r){return (r.datas||[]).map(d=>d.data).filter(Boolean).sort();}
+function ultimaData(r){const ds=todasDatas(r);return ds.length?ds[ds.length-1]:"";}
+function ultimoRegistro(t){let last="";aulasDaTurmaGlobal().forEach(a=>{const d=ultimaData(getRec(t.id,a.id));if(d>last)last=d;});return last;}
+function realizadasNoMes(t){const ym=todayISO().slice(0,7);let c=0;aulasDaTurmaGlobal().forEach(a=>{const r=getRec(t.id,a.id);if(todasDatas(r).some(d=>d.slice(0,7)===ym))c++;});return c;}
 
 /* ================= ESTADO ================= */
 const KEY="dav1_state";
 let state=load();
-function defaultState(){const t={};TURMAS.forEach(x=>t[x.id]={aulas:{}});
+function novoCronograma(){return CRONOGRAMA_INICIAL.map(a=>({...a}));}
+function normalizarEstado(s){
+ if(!s||!s.turmas)return defaultState();
+ if(!Array.isArray(s.cronograma)||!s.cronograma.length){s.cronograma=novoCronograma();s.cronogramaU=s.updatedAt||Date.now();}
+ s.cronograma=s.cronograma.map((a,i)=>({id:a.id||("a"+(i+1)),tema:a.tema||"",tipo:a.tipo||"Teórica"}));
+ const ids=s.cronograma.map(a=>a.id);
+ TURMAS.forEach(t=>{
+  if(!s.turmas[t.id])s.turmas[t.id]={aulas:{}};
+  const old=s.turmas[t.id].aulas||{};const novo={};
+  Object.keys(old).forEach(k=>{
+   const rec=old[k];
+   let id=ids.includes(k)?k:null;
+   if(!id&&/^\d+$/.test(k))id=ids[parseInt(k,10)-1];
+   if(!id)return;
+   const r={...rec,status:["Pendente","Em andamento","Realizada"].includes(rec.status)?rec.status:(rec.status==="Realizada"?"Realizada":"Pendente"),datas:Array.isArray(rec.datas)?rec.datas:[],fotos:Array.isArray(rec.fotos)?rec.fotos:[]};
+   if(rec.data||rec.obs){r.datas.push({id:uid(),data:rec.data||"",obs:rec.obs||"",fotos:[]});}
+   if(rec.fotos&&r.datas.length){r.datas[0].fotos=r.fotos;r.fotos=[];}
+   delete r.data;delete r.obs;
+   novo[id]=r;
+  });
+  s.turmas[t.id].aulas=novo;
+ });
+ s.v=3;return s;
+}
+function defaultState(){
+ const t={};TURMAS.forEach(x=>t[x.id]={aulas:{}});
  const pre={
   lorena_seg:{1:{status:"Realizada",data:"2026-10-13",obs:"Repassar conteúdo para outras turmas. Correção: trabalho aplicado."}},
   guara_sex:{1:{status:"Realizada",data:"",obs:""},2:{status:"Realizada",data:"",obs:"10 grupos. Não falei das patologias."}},
@@ -322,16 +373,18 @@ function defaultState(){const t={};TURMAS.forEach(x=>t[x.id]={aulas:{}});
   guara_sab11:{1:{status:"Realizada",data:"",obs:""}},
   lorena_sab15:{1:{status:"Realizada",data:"",obs:""}}
  };
- for(const tid in pre)for(const n in pre[tid]){t[tid].aulas[n]=Object.assign({fotos:[]},pre[tid][n]);}
- return {v:2,updatedAt:Date.now(),turmas:t};}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.turmas)return s;}catch(e){}return defaultState();}
+ const cronograma=novoCronograma();
+ for(const tid in pre)for(const n in pre[tid]){const id=cronograma[Number(n)-1]?.id;if(id)t[tid].aulas[id]=Object.assign({datas:[],fotos:[]},pre[tid][n],{datas:pre[tid][n].data?[{id:uid(),data:pre[tid][n].data,obs:pre[tid][n].obs||"",fotos:[]}]:[]});}
+ return {v:3,updatedAt:Date.now(),cronograma,cronogramaU:Date.now(),turmas:t};
+}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.turmas)return normalizarEstado(s);}catch(e){}return defaultState();}
 function save(){state.updatedAt=Date.now();
  try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){toast("Armazenamento cheio — apague algumas fotos");}
- // backup automático a cada 10 alterações
  try{let bc=parseInt(localStorage.getItem("dav_bcount")||"0",10)+1;
   if(bc>=10){bc=0;tentarBackup(false);}localStorage.setItem("dav_bcount",String(bc));}catch(e){}
  agendarSyncAuto();atualizarPill();}
-function touchRec(tid,n,rec){rec.u=Date.now();state.turmas[tid].aulas[n]=rec;save();}
+function touchRec(tid,id,rec){rec.u=Date.now();state.turmas[tid].aulas[id]=rec;save();}
+function touchCronograma(){state.cronogramaU=Date.now();save();}
 
 /* ================= BACKUP ================= */
 function nomeBackup(){const d=new Date();return "diario_backup_"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"_"+pad(d.getHours())+pad(d.getMinutes())+".json";}
@@ -398,9 +451,11 @@ async function driveUpload(data){
  if(!r.ok)throw{status:r.status};
  const j=await r.json();G.fileId=j.id;localStorage.setItem("dav_file_id",G.fileId);}
 function mesclar(inc){let novos=0;
+ inc=normalizarEstado(inc);
+ if((inc.cronogramaU||0)>(state.cronogramaU||0)){state.cronograma=inc.cronograma;state.cronogramaU=inc.cronogramaU;novos++;}
  for(const tid in inc.turmas){if(!state.turmas[tid])state.turmas[tid]={aulas:{}};
-  for(const n in inc.turmas[tid].aulas){const a=inc.turmas[tid].aulas[n];const cur=getRec(tid,n);
-   if((a.u||0)>(cur.u||0)){state.turmas[tid].aulas[n]=a;novos++;}}}
+  for(const id in inc.turmas[tid].aulas){const a=inc.turmas[tid].aulas[id];const cur=getRec(tid,id);
+   if((a.u||0)>(cur.u||0)){state.turmas[tid].aulas[id]=a;novos++;}}}
  return novos;}
 async function syncAgora(manual){
  if(!gTokenOk()){G.status="expired";atualizarPill();if(manual)toast("Sessão expirada — conecte novamente");return;}
@@ -432,7 +487,7 @@ function atualizarPill(){
 let view="dashboard",turmaAtual="lorena_seg",galTurma="todas",scrollAula=null;
 document.querySelectorAll("nav.bottom button").forEach(b=>b.addEventListener("click",()=>{buzz(6);view=b.dataset.view;render();window.scrollTo({top:0});}));
 function render(){document.querySelectorAll("nav.bottom button").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
- if(view==="dashboard")renderDashboard();else if(view==="diario")renderDiario();else if(view==="galeria")renderGaleria();else renderConfig();atualizarPill();}
+ if(view==="dashboard")renderDashboard();else if(view==="diario")renderDiario();else if(view==="galeria")renderGaleria();else if(view==="cronograma")renderCronograma();else renderConfig();atualizarPill();}
 
 /* ================= AULA DE HOJE ================= */
 function proxDataTurma(t,now){const hm=t.horario.split(" - ")[0].split(":");
@@ -459,7 +514,7 @@ function renderDashboard(){
    <h2>${esc(best.t.nome)}</h2>
    <div class="meta">${NOMES_DIAS[best.d.getDay()]}, ${best.d.getDate()}/${pad(best.d.getMonth()+1)} às ${best.t.horario.split(" - ")[0]} · ${relativo(best.d)}</div>
    <div class="tema"><b>Aula ${best.a.n}:</b> ${esc(trunc(best.a.tema,110))}</div>
-   <button class="btn" onclick="abrirRegistro('${best.t.id}',${best.a.n})">${ic("chev",17)} ${isHoje?"Registrar esta aula":"Abrir no diário"}</button>
+   <button class="btn" onclick="abrirRegistro('${best.t.id}','${best.a.id}')">${ic("chev",17)} ${isHoje?"Registrar esta aula":"Abrir no diário"}</button>
   </div>`;}
  let cards=TURMAS.map((t,i)=>{
   const p=progresso(t),prox=proximaAula(t);
@@ -482,76 +537,69 @@ function abrirRegistro(tid,n){buzz(10);turmaAtual=tid;view="diario";scrollAula=n
 
 /* ================= DIÁRIO ================= */
 function renderDiario(){
- const t=turmaById(turmaAtual);
+ const t=turmaById(turmaAtual), aulas=aulasDaTurmaGlobal();
  const chips=TURMAS.map(x=>`<button class="chip ${x.id===turmaAtual?"active":""}" onclick="selTurma('${x.id}')">${esc(x.curta)}</button>`).join("");
- const lista=t.aulas.map((a,i)=>{
-  const r=getRec(t.id,a.n),done=r.status==="Realizada";
-  const fotos=(r.fotos||[]).map(f=>`<div class="foto-thumb"><img src="${f.src}"><span class="tag">${f.ctx==="geral"?"Geral":"Aula "+f.aulaN}</span><button class="del" onclick="delFoto('${t.id}',${a.n},'${f.id}')">${ic("x",11)}</button></div>`).join("");
-  return `<div class="card aula" id="aula-${a.n}" style="animation-delay:${Math.min(i*0.03,0.4)}s">
+ const lista=aulas.map((a,i)=>{
+  const r=getRec(t.id,a.id),status=r.status||"Pendente";
+  const badgeClass=a.tipo==="Teórica"?"teo":(a.tipo==="Prática"?"pra":"vis");
+  const datas=(r.datas||[]).map((d,di)=>{
+   const fotos=(d.fotos||[]).map(f=>`<div class="foto-thumb"><img src="${f.src}"><span class="tag">${fmtData(d.data)}</span><button class="del" onclick="delFoto('${t.id}','${a.id}','${f.id}',${di})">${ic("x",11)}</button></div>`).join("");
+   return `<div class="data-bloco">
+    <div class="data-head"><b>${di+1}ª data</b><button class="btn-mini danger" onclick="removerData('${t.id}','${a.id}',${di})">Excluir data</button></div>
+    <div class="row-data"><span>Data</span><input type="date" value="${d.data||""}" onchange="setData('${t.id}','${a.id}',${di},this.value)"></div>
+    <textarea class="obs" placeholder="O que foi feito nesta data…" oninput="setObs('${t.id}','${a.id}',${di},this.value)">${esc(d.obs||"")}</textarea>
+    <div class="fotos">${fotos}<button class="btn-addfoto" onclick="abrirModalFoto('${t.id}','${a.id}',${di})">${ic("cam",22)}</button></div>
+   </div>`;
+  }).join("");
+  return `<div class="card aula" id="aula-${a.id}" style="animation-delay:${Math.min(i*0.03,0.4)}s">
    <div class="aula-top">
-    <span class="aula-num">Aula ${a.n}</span>
-    <span class="badge ${a.tipo==="Teórica"?"teo":(a.tipo==="Prática"?"pra":"vis")}">${a.tipo}</span>
-    <button class="btn-status ${done?"done":"pend"}" onclick="toggleStatus('${t.id}',${a.n})">${done?ic("check",14)+" Realizada":"Pendente"}</button>
+    <span class="aula-num">Aula ${a.n}</span><span class="badge ${badgeClass}">${esc(a.tipo)}</span>
+    <button class="btn-status ${status==="Realizada"?"done":(status==="Em andamento"?"pend":"pend")}" onclick="toggleStatus('${t.id}','${a.id}')">${status==="Realizada"?ic("check",14)+" Realizada":status==="Em andamento"?"Em andamento":"Pendente"}</button>
    </div>
    <div class="tema">${esc(a.tema)}</div>
-   <div class="row-data"><span>Data</span><input type="date" value="${r.data||""}" onchange="setData('${t.id}',${a.n},this.value)"></div>
-   <textarea class="obs" placeholder="Observações sobre como o conteúdo foi ministrado…" oninput="setObs('${t.id}',${a.n},this.value)">${esc(r.obs)}</textarea>
-   <div class="fotos">${fotos}<button class="btn-addfoto" onclick="abrirModalFoto('${t.id}',${a.n})">${ic("cam",22)}</button></div>
-  </div>`;}).join("");
+   <div class="aula-datas">${datas||`<div class="aula-status-help">Nenhuma data registrada ainda.</div>`}</div>
+   <button class="btn-adddata" onclick="adicionarData('${t.id}','${a.id}')">${ic("plus",16)} Adicionar outra data</button>
+  </div>`;
+ }).join("");
  $("#app").innerHTML=`<div class="chips">${chips}</div>${lista}`;
- if(scrollAula){const n=scrollAula;scrollAula=null;
-  setTimeout(()=>{const el=document.getElementById("aula-"+n);
-   if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");
-    const r=getRec(turmaAtual,n);if(r.status!=="Realizada"){} }},120);}
+ if(scrollAula){const id=scrollAula;scrollAula=null;setTimeout(()=>{const el=document.getElementById("aula-"+id);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.classList.add("flash");}},120);}
 }
 function selTurma(tid){buzz(6);turmaAtual=tid;render();}
-function toggleStatus(tid,n){const r=getRec(tid,n);
- if(r.status!=="Realizada"){r.status="Realizada";if(!r.data)r.data=todayISO();buzz([12,40,12]);}
+function toggleStatus(tid,id){const r=getRec(tid,id);const tema=aulasDaTurmaGlobal().find(a=>a.id===id);
+ if(r.status==="Pendente"){r.status="Em andamento";buzz(8);}
+ else if(r.status==="Em andamento"){r.status="Realizada";if(!(r.datas||[]).some(d=>d.data)){r.datas=[{id:uid(),data:todayISO(),obs:"",fotos:[]}];}buzz([12,40,12]);}
  else{r.status="Pendente";buzz(8);}
- touchRec(tid,n,r);renderDiario();toast(r.status==="Realizada"?"Aula "+n+" registrada":"Aula "+n+" voltou para pendente");}
+ touchRec(tid,id,r);renderDiario();toast(r.status==="Realizada"?"Aula "+(tema?tema.n:"")+" registrada":r.status==="Em andamento"?"Aula em andamento":"Aula voltou para pendente");}
+function adicionarData(tid,id){const r=getRec(tid,id);r.datas=r.datas||[];r.datas.push({id:uid(),data:todayISO(),obs:"",fotos:[]});if(r.status==="Pendente")r.status="Em andamento";touchRec(tid,id,r);renderDiario();}
+function removerData(tid,id,di){const r=getRec(tid,id);if(!r.datas||!r.datas[di])return;if(!confirm("Excluir esta data e suas observações e fotos?"))return;r.datas.splice(di,1);if(!r.datas.length&&r.status==="Em andamento")r.status="Pendente";touchRec(tid,id,r);renderDiario();}
 let obsTimer=null;
-function setObs(tid,n,val){const r=getRec(tid,n);r.obs=val;state.turmas[tid].aulas[n]=r;clearTimeout(obsTimer);obsTimer=setTimeout(save,500);}
-function setData(tid,n,val){const r=getRec(tid,n);r.data=val;touchRec(tid,n,r);}
+function setObs(tid,id,di,val){const r=getRec(tid,id);if(!r.datas||!r.datas[di])return;r.datas[di].obs=val;state.turmas[tid].aulas[id]=r;clearTimeout(obsTimer);obsTimer=setTimeout(save,500);}
+function setData(tid,id,di,val){const r=getRec(tid,id);if(!r.datas||!r.datas[di])return;r.datas[di].data=val;touchRec(tid,id,r);renderDiario();}
 
 /* ================= FOTOS ================= */
 let pendingFoto=null;
-function abrirModalFoto(tid,n){buzz(6);pendingFoto={tid,n};
- $("#modal-root").innerHTML=`<div class="overlay" onclick="fecharModal()">
-  <div class="sheet" onclick="event.stopPropagation()">
-   <h3>Anexar foto</h3>
-   <p>Vincule a foto a esta aula ou envie para a galeria geral da turma.</p>
-   <button class="btn btn-acc" onclick="escolherCtx('aula')">${ic("file",17)} Vincular à Aula ${n}</button>
-   <button class="btn btn-sec" onclick="escolherCtx('geral')">${ic("image",17)} Galeria da turma</button>
-   <button class="btn btn-line" onclick="fecharModal()">Cancelar</button>
-  </div></div>`;}
+function abrirModalFoto(tid,id,di){buzz(6);pendingFoto={tid,id,di};
+ $("#modal-root").innerHTML=`<div class="overlay" onclick="fecharModal()"><div class="sheet" onclick="event.stopPropagation()">
+  <h3>Anexar foto</h3><p>A foto ficará vinculada à data desta aula.</p>
+  <button class="btn btn-acc" onclick="escolherCtx('data')">${ic("cam",17)} Escolher foto</button>
+  <button class="btn btn-line" onclick="fecharModal()">Cancelar</button>
+ </div></div>`;}
 function escolherCtx(ctx){pendingFoto.ctx=ctx;fecharModal();$("#fileInput").click();}
 function fecharModal(){$("#modal-root").innerHTML="";}
 $("#fileInput").addEventListener("change",async e=>{
- const file=e.target.files[0];e.target.value="";if(!file||!pendingFoto)return;
- const src=await comprimirFoto(file);
- const r=getRec(pendingFoto.tid,pendingFoto.n);
- r.fotos=r.fotos||[];r.fotos.push({id:uid(),src,ctx:pendingFoto.ctx,aulaN:pendingFoto.ctx==="aula"?pendingFoto.n:null});
- touchRec(pendingFoto.tid,pendingFoto.n,r);buzz(10);renderDiario();toast("Foto anexada");});
-function comprimirFoto(file){return new Promise(res=>{const img=new Image();const url=URL.createObjectURL(file);
- img.onload=()=>{const max=1280,sc=Math.min(1,max/Math.max(img.width,img.height));
-  const w=Math.round(img.width*sc),h=Math.round(img.height*sc);
-  const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);
-  URL.revokeObjectURL(url);res(c.toDataURL("image/jpeg",0.72));};img.src=url;});}
-function delFoto(tid,n,fid){if(!confirm("Apagar esta foto?"))return;const r=getRec(tid,n);r.fotos=r.fotos.filter(f=>f.id!==fid);touchRec(tid,n,r);render();}
+ const file=e.target.files[0];e.target.value="";if(!file||!pendingFoto)return;const src=await comprimirFoto(file);const r=getRec(pendingFoto.tid,pendingFoto.id);
+ if(!r.datas||!r.datas[pendingFoto.di])return;r.datas[pendingFoto.di].fotos=r.datas[pendingFoto.di].fotos||[];
+ r.datas[pendingFoto.di].fotos.push({id:uid(),src});touchRec(pendingFoto.tid,pendingFoto.id,r);buzz(10);renderDiario();toast("Foto anexada");});
+function comprimirFoto(file){return new Promise(res=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{const max=1280,sc=Math.min(1,max/Math.max(img.width,img.height));const w=Math.round(img.width*sc),h=Math.round(img.height*sc);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);URL.revokeObjectURL(url);res(c.toDataURL("image/jpeg",0.72));};img.src=url;});}
+function delFoto(tid,id,fid,di){if(!confirm("Apagar esta foto?"))return;const r=getRec(tid,id);if(di!=null&&r.datas&&r.datas[di])r.datas[di].fotos=(r.datas[di].fotos||[]).filter(f=>f.id!==fid);else r.fotos=(r.fotos||[]).filter(f=>f.id!==fid);touchRec(tid,id,r);render();}
 
 /* ================= GALERIA ================= */
 function renderGaleria(){
- const chips=`<button class="chip ${galTurma==="todas"?"active":""}" onclick="selGal('todas')">Todas</button>`+
-  TURMAS.map(x=>`<button class="chip ${galTurma===x.id?"active":""}" onclick="selGal('${x.id}')">${esc(x.curta)}</button>`).join("");
- let items=[];
- TURMAS.filter(t=>galTurma==="todas"||t.id===galTurma).forEach(t=>{
-  t.aulas.forEach(a=>{getRec(t.id,a.n).fotos.forEach(f=>items.push({...f,turma:t.curta,tid:t.id,aula:a.n}));});});
- const grid=items.length?`<div class="gal-grid">${items.map(f=>`
-   <div class="gal-item"><img src="${f.src}">
-    <span class="lbl">${esc(f.turma)} · ${f.ctx==="geral"?"Geral":"Aula "+f.aulaN}</span>
-    <button class="del" onclick="delFoto('${f.tid}',${f.aula},'${f.id}')">${ic("x",12)}</button>
-   </div>`).join("")}</div>`
-  :`<div class="gal-empty">Nenhuma foto ainda.<br>Anexe fotos pelo diário de cada aula.</div>`;
+ const chips=`<button class="chip ${galTurma==="todas"?"active":""}" onclick="selGal('todas')">Todas</button>`+TURMAS.map(x=>`<button class="chip ${galTurma===x.id?"active":""}" onclick="selGal('${x.id}')">${esc(x.curta)}</button>`).join("");
+ let items=[];TURMAS.filter(t=>galTurma==="todas"||t.id===galTurma).forEach(t=>{
+  aulasDaTurmaGlobal().forEach(a=>{const r=getRec(t.id,a.id);(r.fotos||[]).forEach(f=>items.push({...f,turma:t.curta,tid:t.id,aula:a.n,data:""}));(r.datas||[]).forEach(d=>(d.fotos||[]).forEach(f=>items.push({...f,turma:t.curta,tid:t.id,aula:a.n,idRec:a.id,data:d.data,di:r.datas.indexOf(d)})));});
+ });
+ const grid=items.length?`<div class="gal-grid">${items.map(f=>`<div class="gal-item"><img src="${f.src}"><span class="lbl">${esc(f.turma)} · Aula ${f.aula}${f.data?" · "+fmtData(f.data):""}</span><button class="del" onclick="delFoto('${f.tid}','${f.idRec||aulasDaTurmaGlobal().find(a=>a.n===f.aula)?.id||""}','${f.id}',${f.di!=null?f.di:"null"})">${ic("x",12)}</button></div>`).join("")}</div>`:`<div class="gal-empty">Nenhuma foto ainda.<br>Anexe fotos pelo diário de cada aula.</div>`;
  $("#app").innerHTML=`<div class="chips">${chips}</div>${grid}`;
 }
 function selGal(v){buzz(6);galTurma=v;renderGaleria();}
@@ -560,7 +608,7 @@ function selGal(v){buzz(6);galTurma=v;renderGaleria();}
 function gerarCodigo(){
  const incluiFotos=$("#chkFotosSync").checked;
  let payload=JSON.parse(JSON.stringify(state));
- if(!incluiFotos){for(const tid in payload.turmas)for(const n in payload.turmas[tid].aulas)payload.turmas[tid].aulas[n].fotos=[];}
+ if(!incluiFotos){for(const tid in payload.turmas)for(const id in payload.turmas[tid].aulas){payload.turmas[tid].aulas[id].fotos=[];(payload.turmas[tid].aulas[id].datas||[]).forEach(d=>d.fotos=[]);}}
  const json=JSON.stringify(payload);
  let code="DAV1."+json;
  if(window.LZString){try{code="DAV1."+LZString.compressToBase64(json);}catch(e){}}
@@ -578,44 +626,36 @@ function importarCodigo(){
 
 /* ================= EXPORTAR ================= */
 function turmasExport(){const v=$("#expTurma").value;return v==="todas"?TURMAS:[turmaById(v)];}
-function filtraPeriodo(t){const comp=$("#expCompleto").checked;if(comp)return t.aulas;
- const de=$("#expDe").value,ate=$("#expAte").value;
- return t.aulas.filter(a=>{const d=getRec(t.id,a.n).data;if(!d)return false;
-  if(de&&d<de)return false;if(ate&&d>ate)return false;return true;});}
-function periodoLabel(){const comp=$("#expCompleto").checked;if(comp)return "Diário completo";
- const de=$("#expDe").value,ate=$("#expAte").value;
- if(!de&&!ate)return "Diário completo";return "Período: "+(de?fmtData(de):"início")+" a "+(ate?fmtData(ate):"hoje");}
+function filtraPeriodo(t){const comp=$("#expCompleto").checked;const de=$("#expDe").value,ate=$("#expAte").value;const aulas=aulasDaTurmaGlobal();if(comp)return aulas;return aulas.filter(a=>{const r=getRec(t.id,a.id);return todasDatas(r).some(d=>(!de||d>=de)&&(!ate||d<=ate));});}
+function periodoLabel(){const comp=$("#expCompleto").checked;if(comp)return "Diário completo";const de=$("#expDe").value,ate=$("#expAte").value;if(!de&&!ate)return "Diário completo";return "Período: "+(de?fmtData(de):"início")+" a "+(ate?fmtData(ate):"hoje");}
+function datasTexto(r){return todasDatas(r).map(fmtData).join(", ");}
+function obsTexto(r){return (r.datas||[]).map(d=>(d.data?fmtData(d.data)+": ":"")+(d.obs||"")).filter(Boolean).join(" | ");}
 function expExcel(){
- if(typeof XLSX==="undefined"){toast("Sem internet — biblioteca não carregada");return;}
- const wb=XLSX.utils.book_new();
- const resumo=TURMAS.map(t=>{const p=progresso(t),px=proximaAula(t);
-  return {"Turma":t.nome,"Cidade":t.cidade,"Dia/Horário":t.dia+" "+t.horario,"Realizadas":p.feitas,"Total":p.total,"%":p.pct,
-   "Próxima Aula":px?("Aula "+px.n+" — "+trunc(px.tema,60)):"Concluído"};});
+ if(typeof XLSX==="undefined"){toast("Sem internet — biblioteca não carregada");return;}const wb=XLSX.utils.book_new();
+ const resumo=TURMAS.map(t=>{const p=progresso(t),px=proximaAula(t);return {"Turma":t.nome,"Cidade":t.cidade,"Dia/Horário":t.dia+" "+t.horario,"Realizadas":p.feitas,"Total":p.total,"%":p.pct,"Próxima Aula":px?("Aula "+px.n+" — "+trunc(px.tema,60)):"Concluído"};});
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(resumo),"Resumo");
- turmasExport().forEach(t=>{const rows=filtraPeriodo(t).map(a=>{const r=getRec(t.id,a.n);
-   return {"Aula":a.n,"Tema":a.tema,"Tipo":a.tipo,"Data":fmtData(r.data),"Status":r.status,"Observações":r.obs,"Fotos":(r.fotos||[]).length};});
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),t.curta.replace(/·/g,"-").slice(0,31));});
+ turmasExport().forEach(t=>{const rows=filtraPeriodo(t).flatMap(a=>{const r=getRec(t.id,a.id);const ds=(r.datas||[]);if(!ds.length)return [{"Aula":a.n,"Tema":a.tema,"Tipo":a.tipo,"Data":"","Status":r.status,"Observações":"","Fotos":(r.fotos||[]).length}];return ds.map(d=>({"Aula":a.n,"Tema":a.tema,"Tipo":a.tipo,"Data":fmtData(d.data),"Status":r.status,"Observações":d.obs||"","Fotos":(d.fotos||[]).length}));});XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),t.curta.replace(/·/g,"-").slice(0,31));});
  XLSX.writeFile(wb,"diario_aulas_"+todayISO()+".xlsx");toast("Excel exportado");}
 function expPDF(){
- if(!window.jspdf){toast("Sem internet — biblioteca não carregada");return;}
- const {jsPDF}=window.jspdf;const doc=new jsPDF();
- turmasExport().forEach((t,i)=>{if(i>0)doc.addPage();
-  doc.setFontSize(13);doc.setTextColor(31,39,24);doc.text("Diário de Classe — "+t.nome,14,16);
-  doc.setFontSize(9);doc.setTextColor(102,112,93);
-  doc.text("Cidade: "+t.cidade+"   |   "+t.dia+" "+t.horario+"   |   "+periodoLabel(),14,22);
-  const body=filtraPeriodo(t).map(a=>{const r=getRec(t.id,a.n);
-   return [a.n,trunc(a.tema,90),a.tipo,fmtData(r.data),r.status==="Realizada"?"Sim":"—",(r.obs||"").replace(/\n/g," ").slice(0,140)];});
-  doc.autoTable({startY:27,head:[["Aula","Tema","Tipo","Data","Realizada","Observações"]],body:body,
-   styles:{fontSize:7.2,cellPadding:1.6,textColor:[40,45,36]},
-   headStyles:{fillColor:[92,122,61],textColor:255,fontSize:7.6},
-   alternateRowStyles:{fillColor:[246,248,243]},
-   columnStyles:{0:{cellWidth:11},1:{cellWidth:66},2:{cellWidth:24},3:{cellWidth:20},4:{cellWidth:18},5:{cellWidth:41}}});
-  doc.setFontSize(8);doc.setTextColor(150,155,145);
-  doc.text("Professor(a): ______________________________     Coordenação: ______________________________     Data: ____/____/______",14,doc.lastAutoTable.finalY+14);
- });
+ if(!window.jspdf){toast("Sem internet — biblioteca não carregada");return;}const {jsPDF}=window.jspdf;const doc=new jsPDF();
+ turmasExport().forEach((t,i)=>{if(i>0)doc.addPage();doc.setFontSize(13);doc.setTextColor(31,39,24);doc.text("Diário de Classe — "+t.nome,14,16);doc.setFontSize(9);doc.setTextColor(102,112,93);doc.text("Cidade: "+t.cidade+"   |   "+t.dia+" "+t.horario+"   |   "+periodoLabel(),14,22);
+  const body=filtraPeriodo(t).flatMap(a=>{const r=getRec(t.id,a.id),ds=r.datas||[];if(!ds.length)return [[a.n,trunc(a.tema,75),a.tipo,"",r.status,"—"]];return ds.map(d=>[a.n,trunc(a.tema,75),a.tipo,fmtData(d.data),r.status,(d.obs||"").replace(/\n/g," ").slice(0,140)]);});
+  doc.autoTable({startY:27,head:[["Aula","Tema","Tipo","Data","Status","O que foi feito"]],body,styles:{fontSize:7.2,cellPadding:1.6,textColor:[40,45,36]},headStyles:{fillColor:[92,122,61],textColor:255,fontSize:7.6},alternateRowStyles:{fillColor:[246,248,243]},columnStyles:{0:{cellWidth:11},1:{cellWidth:59},2:{cellWidth:24},3:{cellWidth:20},4:{cellWidth:25},5:{cellWidth:40}}});
+  doc.setFontSize(8);doc.setTextColor(150,155,145);doc.text("Professor(a): ______________________________     Coordenação: ______________________________     Data: ____/____/______",14,doc.lastAutoTable.finalY+14);});
  doc.save("diario_aulas_"+todayISO()+".pdf");toast("PDF exportado");}
 function togglePeriodo(){const comp=$("#expCompleto").checked;$("#expDatasRow").style.display=comp?"none":"flex";}
 function apagarTudo(){if(confirm("Tem certeza? Todos os dados deste aparelho serão apagados.")){localStorage.removeItem(KEY);state=defaultState();save();render();toast("Dados apagados");}}
+
+/* ================= CRONOGRAMA ================= */
+function abrirCronograma(){buzz(6);view="cronograma";render();window.scrollTo({top:0});}
+function renderCronograma(){
+ const c=cronogramaAtual();
+ const rows=c.map((a,i)=>`<div class="crono-item"><div class="crono-head"><span class="crono-num">${i+1}</span><div class="crono-actions"><button class="btn-mini" onclick="moverCronograma(${i},-1)" ${i===0?"disabled":""}>↑</button><button class="btn-mini" onclick="moverCronograma(${i},1)" ${i===c.length-1?"disabled":""}>↓</button></div></div><div class="field"><label>Tema</label><input value="${esc(a.tema)}" oninput="editarTemaCronograma('${a.id}',this.value)"></div><div class="field"><label>Tipo</label><select onchange="editarTipoCronograma('${a.id}',this.value)"><option ${a.tipo==="Teórica"?"selected":""}>Teórica</option><option ${a.tipo==="Prática"?"selected":""}>Prática</option><option ${a.tipo==="Visita Técnica"?"selected":""}>Visita Técnica</option><option ${!["Teórica","Prática","Visita Técnica"].includes(a.tipo)?"selected":""}>Outro</option></select></div></div>`).join("");
+ $("#app").innerHTML=`<div class="card"><div class="status-line ok"><span class="dot"></span>Cronograma global</div><p class="hint" style="margin-top:0">As alterações feitas aqui valem para as cinco turmas. O histórico de datas, observações e fotos acompanha cada aula mesmo quando você muda a ordem.</p></div><div class="crono-list">${rows}</div><button class="btn btn-line crono-save" onclick="view='config';render()">Voltar para ajustes</button>`;
+}
+function editarTemaCronograma(id,val){const a=state.cronograma.find(x=>x.id===id);if(!a)return;a.tema=val;clearTimeout(window.cronoTimer);window.cronoTimer=setTimeout(touchCronograma,500);}
+function editarTipoCronograma(id,val){const a=state.cronograma.find(x=>x.id===id);if(!a)return;a.tipo=val;touchCronograma();renderCronograma();}
+function moverCronograma(i,dir){const j=i+dir;if(j<0||j>=state.cronograma.length)return;[state.cronograma[i],state.cronograma[j]]=[state.cronograma[j],state.cronograma[i]];touchCronograma();renderCronograma();}
 
 /* ================= CONFIG ================= */
 function renderConfig(){
@@ -623,6 +663,8 @@ function renderConfig(){
  const conectado=gTokenOk();
  const lastBk=parseInt(localStorage.getItem("dav_last_backup")||"0",10);
  $("#app").innerHTML=`
+  <div class="sec-title">Cronograma</div>
+  <div class="card"><p class="hint" style="margin-top:0">Edite o tema, o tipo ou a ordem das aulas sem alterar o código do site.</p><button class="btn btn-sec" onclick="abrirCronograma()">${ic("book",17)} Editar cronograma</button></div>
   <div id="secGoogle"></div>
   <div class="sec-title">Sincronização automática — Google Drive</div>
   <div class="card">
