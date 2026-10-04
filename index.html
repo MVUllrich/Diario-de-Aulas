@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -78,7 +79,6 @@ nav.bottom button:active .ic{transform:scale(.9)}
   display:flex;align-items:center;gap:6px}
 .hero h2{font-size:1.18rem;font-weight:800;margin:6px 0 2px;letter-spacing:-.3px}
 .hero .meta{font-size:.8rem;opacity:.85;font-weight:500}
-
 .hero .tema{font-size:.82rem;color:#f1c40f;opacity:.95;margin-top:8px;line-height:1.5}
 .hero .btn{margin-top:14px;background:#fff;color:var(--acc-d);border:none}
 /* ---------- DASHBOARD ---------- */
@@ -241,7 +241,7 @@ details code{background:#eef1e6;padding:1px 5px;border-radius:5px;font-size:.72r
 <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
 <symbol id="i-paw" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><ellipse cx="12" cy="16.5" rx="4.2" ry="3.4"/><circle cx="6" cy="10" r="2"/><circle cx="10" cy="6.5" r="2"/><circle cx="15" cy="6.5" r="2"/><circle cx="19" cy="10" r="2"/></g></symbol>
-<symbol id="i-g" viewBox="0 0 24 24"><path fill="#4285F4" stroke="none" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.09 3.57-5.16 3.57-8.81z"/><path fill="#34A853" stroke="none" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.87-3c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.29v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" stroke="none" d="M5.29 14.29A7.2 7.2 0 0 1 4.9 12c0-.8.14-1.57.38-2.29v-3.1H1.3A12 12 0 0 0 0 12c0 1.94.46 3.77 1.29 5.38l4-3.09z"/><path fill="#EA4335" stroke="none" d="M12 4.77c1.76 0 3.34.6 4.58 1.8l3.44-3.44A11.98 11.98 0 0 0 12 0 12 12 0 0 0 1.29 6.61l4 3.09c.94-2.85 3.6-4.93 6.71-4.93z"/></symbol>
+<symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></symbol>
 </svg>
 <header class="top">
   <div class="top-inner">
@@ -308,7 +308,7 @@ const TURMAS=[
 ];
 const CRONOGRAMA_INICIAL=CURRICULO.map((c,i)=>({id:"a"+(i+1),tema:c[0],tipo:c[1]}));
 function cronogramaAtual(){return state&&state.cronograma&&state.cronograma.length?state.cronograma:CRONOGRAMA_INICIAL;}
-function aulasDaTurma(){return cronogramaAtual().map((a,i)=>({...a,n:i+1}));}
+function aulasDaTurmaGlobal(){return cronogramaAtual().map((a,i)=>({...a,n:i+1}));}
 const DIAS={"Domingo":0,"Segunda-feira":1,"Terça-feira":2,"Quarta-feira":3,"Quinta-feira":4,"Sexta-feira":5,"Sábado":6};
 const NOMES_DIAS=["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"];
 const NOMES_MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
@@ -327,11 +327,9 @@ let toastT=null;
 function toast(msg){const el=$("#toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2600);}
 function turmaById(id){return TURMAS.find(t=>t.id===id);}
 function getRec(tid,id){return state.turmas[tid].aulas[id]||{status:"Pendente",datas:[],fotos:[]};}
-function aulasDaTurma(t){return aulasDaTurmaGlobal();}
-function aulasDaTurmaGlobal(){return cronogramaAtual().map((a,i)=>({...a,n:i+1}));}
 function proximaAula(t){for(const a of aulasDaTurmaGlobal()){if(getRec(t.id,a.id).status!=="Realizada")return a;}return null;}
 function progresso(t){const aulas=aulasDaTurmaGlobal();let c=0;aulas.forEach(a=>{if(getRec(t.id,a.id).status==="Realizada")c++;});return{feitas:c,total:aulas.length,pct:aulas.length?Math.round(c/aulas.length*100):0};}
-function fotosTurma(tid){const t=turmaById(tid);let out=[];aulasDaTurmaGlobal().forEach(a=>{const r=getRec(tid,a.id);(r.fotos||[]).forEach(f=>out.push({...f,tid,aula:a.n}));(r.datas||[]).forEach(d=>(d.fotos||[]).forEach(f=>out.push({...f,tid,aula:a.n,data:d.data})));});return out;}
+function fotosTurma(tid){let out=[];aulasDaTurmaGlobal().forEach(a=>{const r=getRec(tid,a.id);(r.fotos||[]).forEach(f=>out.push({...f,tid,aula:a.n}));(r.datas||[]).forEach(d=>(d.fotos||[]).forEach(f=>out.push({...f,tid,aula:a.n,data:d.data})));});return out;}
 function todasDatas(r){return (r.datas||[]).map(d=>d.data).filter(Boolean).sort();}
 function ultimaData(r){const ds=todasDatas(r);return ds.length?ds[ds.length-1]:"";}
 function ultimoRegistro(t){let last="";aulasDaTurmaGlobal().forEach(a=>{const d=ultimaData(getRec(t.id,a.id));if(d>last)last=d;});return last;}
@@ -418,55 +416,47 @@ function restaurarBackup(file){const rd=new FileReader();
   const n=mesclar(inc);save();render();toast(n+" registro(s) restaurado(s)");};
  rd.readAsText(file);}
 
-/* ================= SINCRONIZAÇÃO GOOGLE DRIVE ================= */
-const G={token:localStorage.getItem("dav_token")||null,tokenExp:parseInt(localStorage.getItem("dav_token_exp")||"0",10),
- clientId:localStorage.getItem("dav_client_id")||"",fileId:localStorage.getItem("dav_file_id")||"",
- lastSync:parseInt(localStorage.getItem("dav_last_sync")||"0",10),status:"offline"};
-if(G.token&&Date.now()>G.tokenExp){G.token=null;}
-function gTokenOk(){return G.token&&Date.now()<G.tokenExp;}
-function loadGis(){return new Promise((res,rej)=>{if(window.google&&google.accounts&&google.accounts.oauth2)return res();
- const s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.onload=res;s.onerror=()=>rej();document.head.appendChild(s);setTimeout(rej,8000);});}
-function conectarGoogle(){
- if(!navigator.onLine){toast("Sem conexão com a internet");return;}
- loadGis().then(()=>{
-  const cid=($("#gClientId")?$("#gClientId").value:"").trim();
-  if(!cid){toast("Informe o Client ID (guia no passo a passo)");return;}
-  G.clientId=cid;localStorage.setItem("dav_client_id",cid);
-  G.status="busy";atualizarPill();
-  const tc=google.accounts.oauth2.initTokenClient({client_id:cid,
-   scope:"https://www.googleapis.com/auth/drive.file",
-   callback:async resp=>{
-    if(resp.error){G.status="offline";atualizarPill();toast("Autorização cancelada");return;}
-    G.token=resp.access_token;G.tokenExp=Date.now()+(resp.expires_in-300)*1000;
-    localStorage.setItem("dav_token",G.token);localStorage.setItem("dav_token_exp",String(G.tokenExp));
-    toast("Conta conectada");await syncAgora(true);}});
-  tc.requestAccessToken({prompt:""});
- }).catch(()=>toast("Não foi possível carregar o login do Google"));}
-async function gapi(path,opts={}){
- const r=await fetch("https://www.googleapis.com/drive/v3"+path,Object.assign({},opts,
-  {headers:Object.assign({Authorization:"Bearer "+G.token},opts.headers||{})}));
- if(r.status===401){G.token=null;localStorage.removeItem("dav_token");G.status="expired";atualizarPill();throw{auth:true};}
- if(!r.ok)throw{status:r.status};return r;}
-async function driveFind(){
- const q=encodeURIComponent("name='diario_aulas_sync.json' and trashed=false");
- const r=await gapi("/files?q="+q+"&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=10");
- const j=await r.json();const files=j.files||[];
- if(files.length){const escolhido=files.find(f=>f.id===G.fileId)||files[0];G.fileId=escolhido.id;localStorage.setItem("dav_file_id",G.fileId);return escolhido;}
- return null;}
-async function driveDownload(){const f=await driveFind();if(!f)return null;
- const r=await gapi("/files/"+f.id+"?alt=media");const txt=await r.text();
- try{return JSON.parse(txt);}catch(e){return null;}}
-async function driveUpload(data){
- const body=JSON.stringify(data);
- if(G.fileId){await gapi("/files/"+G.fileId,{method:"PATCH",headers:{"Content-Type":"application/json"},body});return;}
- const meta={name:"diario_aulas_sync.json",mimeType:"application/json"};
- const boundary="dav"+Date.now();
- const multipart="--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+JSON.stringify(meta)+
-  "\r\n--"+boundary+"\r\nContent-Type: application/json\r\n\r\n"+body+"\r\n--"+boundary+"--";
- const r=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",{
-  method:"POST",headers:{Authorization:"Bearer "+G.token,"Content-Type":"multipart/related; boundary="+boundary},body:multipart});
- if(!r.ok)throw{status:r.status};
- const j=await r.json();G.fileId=j.id;localStorage.setItem("dav_file_id",G.fileId);}
+/* ================= SINCRONIZAÇÃO SUPABASE ================= */
+const S={
+ url:localStorage.getItem("dav_sp_url")||"",
+ key:localStorage.getItem("dav_sp_key")||"",
+ client:null,
+ lastSync:parseInt(localStorage.getItem("dav_last_sync")||"0",10),
+ status:"offline"
+};
+
+function initSupabase(){
+ if(S.url && S.key && window.supabase){
+  try{
+   S.client=supabase.createClient(S.url, S.key);
+   S.status="ok";
+  }catch(e){
+   S.status="err";
+  }
+ }else{
+  S.status="offline";
+ }
+ atualizarPill();
+}
+
+function salvarCredenciaisSupabase(){
+ const u=($("#spUrl")?$("#spUrl").value:"").trim();
+ const k=($("#spKey")?$("#spKey").value:"").trim();
+ if(!u || !k){toast("Informe a URL e a Anon Key do Supabase");return;}
+ S.url=u; S.key=k;
+ localStorage.setItem("dav_sp_url",u);
+ localStorage.setItem("dav_sp_key",k);
+ initSupabase();
+ syncAgora(true);
+}
+
+function desconectarSupabase(){
+ S.url=""; S.key=""; S.client=null; S.status="offline";
+ localStorage.removeItem("dav_sp_url");
+ localStorage.removeItem("dav_sp_key");
+ atualizarPill(); renderConfig(); toast("Supabase desconectado");
+}
+
 function mergeRecord(cur,remote){
  const c=cur?JSON.parse(JSON.stringify(cur)):{status:"Pendente",datas:[],fotos:[]};
  const r=remote?JSON.parse(JSON.stringify(remote)):{status:"Pendente",datas:[],fotos:[]};
@@ -487,7 +477,9 @@ function mergeRecord(cur,remote){
  const photos=new Map(c.fotos.map(f=>[f.id||f.src,f]));r.fotos.forEach(f=>{const k=f.id||f.src;if(k&&!photos.has(k))photos.set(k,f);});c.fotos=[...photos.values()];
  c.datas=normalizarDatas(c.datas,"merge");return c;
 }
+
 function salvarSnapshotSeguro(tag="antes-sync"){try{const raw=JSON.stringify(state);const packed=window.LZString?LZString.compressToBase64(raw):raw;const key="dav_safe_"+Date.now();localStorage.setItem(key,packed);const keys=Object.keys(localStorage).filter(k=>k.startsWith("dav_safe_")).sort();while(keys.length>3)localStorage.removeItem(keys.shift());localStorage.setItem("dav_safe_last",key);localStorage.setItem("dav_safe_tag",tag);}catch(e){}}
+
 function mesclar(inc){let novos=0;
  inc=normalizarEstado(JSON.parse(JSON.stringify(inc)));
  if((inc.cronogramaU||0)>(state.cronogramaU||0)){state.cronograma=inc.cronograma;state.cronogramaU=inc.cronogramaU;novos++;}
@@ -497,31 +489,38 @@ function mesclar(inc){let novos=0;
    if(JSON.stringify(merged)!==before){state.turmas[tid].aulas[id]=merged;novos++;}
   }}
  return novos;}
+
 async function syncAgora(manual){
- if(!gTokenOk()){G.status="expired";atualizarPill();if(manual)toast("Sessão expirada — conecte novamente");return;}
+ if(!S.client){if(manual)toast("Configure a chave do Supabase nos Ajustes");return;}
  if(!navigator.onLine){if(manual)toast("Sem conexão com a internet");return;}
- G.status="busy";atualizarPill();
+ S.status="busy";atualizarPill();
  try{
-  salvarSnapshotSeguro("antes-google-sync");
-  const remote=await driveDownload();
-  if(remote&&remote.turmas)mesclar(remote);
-  await driveUpload(state);
-  G.lastSync=Date.now();localStorage.setItem("dav_last_sync",String(G.lastSync));
-  saveLocalOnly();G.status="ok";atualizarPill();
-  if(manual)toast("Sincronizado com o Google Drive");
- }catch(e){if(e&&e.auth){/* já tratado */}else{G.status="err";atualizarPill();if(manual)toast("Falha na sincronização — tente novamente");}}
+  salvarSnapshotSeguro("antes-supabase-sync");
+  const { data, error } = await S.client.from('diario_aulas').select('dados').eq('id', 1).single();
+  if(!error && data && data.dados){
+   mesclar(data.dados);
+  }
+  const { error: upsertErr } = await S.client.from('diario_aulas').upsert({ id: 1, dados: state, updated_at: new Date() });
+  if(upsertErr) throw upsertErr;
+  S.lastSync=Date.now();localStorage.setItem("dav_last_sync",String(S.lastSync));
+  saveLocalOnly();S.status="ok";atualizarPill();
+  if(manual)toast("Sincronizado com o Supabase");
+ }catch(e){
+  S.status="err";atualizarPill();
+  if(manual)toast("Erro de conexão ao Supabase");
+ }
 }
+
 function saveLocalOnly(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
 let syncTimer=null;
-function agendarSyncAuto(){if(!gTokenOk())return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncAgora(false),8000);}
-function desconectarGoogle(){G.token=null;G.status="offline";localStorage.removeItem("dav_token");atualizarPill();renderConfig();toast("Conta desconectada");}
-function irSync(){view="config";render();setTimeout(()=>{const el=$("#secGoogle");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});},80);}
+function agendarSyncAuto(){if(!S.client)return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncAgora(false),6000);}
+function irSync(){view="config";render();setTimeout(()=>{const el=$("#secSupabase");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});},80);}
 function fmtHora(ts){const d=new Date(ts);return pad(d.getHours())+":"+pad(d.getMinutes());}
 function atualizarPill(){
  const pill=$("#syncPill");if(!pill)return;const txt=$("#syncPillTxt");
- if(G.status==="busy"){pill.className="busy";txt.textContent="Sincronizando…";}
- else if(gTokenOk()&&G.status==="ok"){pill.className="ok";txt.textContent="Sincronizado "+fmtHora(G.lastSync);}
- else if(G.status==="expired"){pill.className="warn";txt.textContent="Reconectar";}
+ if(S.status==="busy"){pill.className="busy";txt.textContent="Sincronizando…";}
+ else if(S.client&&S.status==="ok"){pill.className="ok";txt.textContent="Sincronizado "+fmtHora(S.lastSync);}
+ else if(S.status==="err"){pill.className="warn";txt.textContent="Erro no Supabase";}
  else{pill.className="";txt.textContent="Não sincronizado";}}
 
 /* ================= NAVEGAÇÃO ================= */
@@ -640,12 +639,12 @@ function renderGaleria(){
  let items=[];TURMAS.filter(t=>galTurma==="todas"||t.id===galTurma).forEach(t=>{
   aulasDaTurmaGlobal().forEach(a=>{const r=getRec(t.id,a.id);(r.fotos||[]).forEach(f=>items.push({...f,turma:t.curta,tid:t.id,aula:a.n,data:""}));(r.datas||[]).forEach(d=>(d.fotos||[]).forEach(f=>items.push({...f,turma:t.curta,tid:t.id,aula:a.n,idRec:a.id,data:d.data,di:r.datas.indexOf(d)})));});
  });
- const grid=items.length?`<div class="gal-grid">${items.map(f=>`<div class="gal-item"><img src="${f.src}"><span class="lbl">${esc(f.turma)} · Aula ${f.aula}${f.data?" · "+fmtData(f.data):""}</span><button class="del" onclick="delFoto('${f.tid}','${f.idRec||aulasDaTurmaGlobal().find(a=>a.n===f.aula)?.id||""}','${f.id}',${f.di!=null?f.di:"null"})">${ic("x",12)}</button></div>`).join("")}</div>`:`<div class="gal-empty">Nenhuma foto ainda.<br>Anexe fotos pelo diário de cada aula.</div>`;
+ const grid=items.length?`<div class="gal-grid">${items.map(f=>`<div class="gal-item"><img src="${f.src}"><span class="lbl">${esc(f.turma)} · Aula ${f.aula}${f.data?" · "+fmtData(f.data):""}</span><button class="del" onclick="delFoto('${f.tid}','${f.idRec\vert{}\vert{}aulasDaTurmaGlobal().find(a=>a.n===f.aula)?.id\vert{}\vert{}""}','${f.id}',${f.di!=null?f.di:"null"})">${ic("x",12)}</button></div>`).join("")}</div>`:`<div class="gal-empty">Nenhuma foto ainda.<br>Anexe fotos pelo diário de cada aula.</div>`;
  $("#app").innerHTML=`<div class="chips">${chips}</div>${grid}`;
 }
 function selGal(v){buzz(6);galTurma=v;renderGaleria();}
 
-/* ================= SINCRONIZAÇÃO MANUAL (fallback) ================= */
+/* ================= SINCRONIZAÇÃO MANUAL ================= */
 function gerarCodigo(){
  const incluiFotos=$("#chkFotosSync").checked;
  let payload=JSON.parse(JSON.stringify(state));
@@ -679,8 +678,6 @@ function limparDuplicacoes(){
 function turmasExport(){const v=$("#expTurma").value;return v==="todas"?TURMAS:[turmaById(v)];}
 function filtraPeriodo(t){const comp=$("#expCompleto").checked;const de=$("#expDe").value,ate=$("#expAte").value;const aulas=aulasDaTurmaGlobal();if(comp)return aulas;return aulas.filter(a=>{const r=getRec(t.id,a.id);return todasDatas(r).some(d=>(!de||d>=de)&&(!ate||d<=ate));});}
 function periodoLabel(){const comp=$("#expCompleto").checked;if(comp)return "Diário completo";const de=$("#expDe").value,ate=$("#expAte").value;if(!de&&!ate)return "Diário completo";return "Período: "+(de?fmtData(de):"início")+" a "+(ate?fmtData(ate):"hoje");}
-function datasTexto(r){return todasDatas(r).map(fmtData).join(", ");}
-function obsTexto(r){return (r.datas||[]).map(d=>(d.data?fmtData(d.data)+": ":"")+(d.obs||"")).filter(Boolean).join(" | ");}
 function expExcel(){
  if(typeof XLSX==="undefined"){toast("Sem internet — biblioteca não carregada");return;}const wb=XLSX.utils.book_new();
  const resumo=TURMAS.map(t=>{const p=progresso(t),px=proximaAula(t);return {"Turma":t.nome,"Cidade":t.cidade,"Dia/Horário":t.dia+" "+t.horario,"Realizadas":p.feitas,"Total":p.total,"%":p.pct,"Próxima Aula":px?("Aula "+px.n+" — "+trunc(px.tema,60)):"Concluído"};});
@@ -711,37 +708,29 @@ function moverCronograma(i,dir){const j=i+dir;if(j<0||j>=state.cronograma.length
 /* ================= CONFIG ================= */
 function renderConfig(){
  const opts=`<option value="todas">Todas as turmas</option>`+TURMAS.map(t=>`<option value="${t.id}">${esc(t.nome)}</option>`).join("");
- const conectado=gTokenOk();
+ const conectado=!!S.client;
  const lastBk=parseInt(localStorage.getItem("dav_last_backup")||"0",10);
  $("#app").innerHTML=`
   <div class="sec-title">Cronograma</div>
   <div class="card"><p class="hint" style="margin-top:0">Edite o tema, o tipo ou a ordem das aulas sem alterar o código do site.</p><button class="btn btn-sec" onclick="abrirCronograma()">${ic("book",17)} Editar cronograma</button></div>
-  <div id="secGoogle"></div>
-  <div class="sec-title">Sincronização automática — Google Drive</div>
+  <div id="secSupabase"></div>
+  <div class="sec-title">Sincronização em Nuvem — Supabase</div>
   <div class="card">
    <div class="status-line ${conectado?"ok":"mut"}"><span class="dot"></span>
-    ${conectado?"Conta conectada — os dados sincronizam sozinhos":"Não conectado"}</div>
-   <div class="field"><label>Client ID do Google Cloud</label>
-    <input type="text" id="gClientId" value="${esc(G.clientId)}" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>
-   <details><summary>${ic("chev",15)} Como conseguir meu Client ID (uma única vez, ~10 min)</summary>
-    <ol>
-     <li>Acesse <code>console.cloud.google.com</code> e crie um projeto novo (nome livre).</li>
-     <li>Em <b>APIs e Serviços → Tela de permissão OAuth</b>, escolha <b>Externo</b> e preencha só o nome e seu e-mail.</li>
-     <li>Em <b>APIs e Serviços → Biblioteca</b>, ative a <b>Google Drive API</b>.</li>
-     <li>Em <b>Credenciais → Criar Credencial → ID do Cliente OAuth</b>, escolha <b>Aplicativo da Web</b>.</li>
-     <li>Em <b>Origens JavaScript autorizadas</b>, adicione a URL onde o app está hospedado (ex.: sua GitHub Pages) e <code>http://localhost:8000</code> para testes.</li>
-     <li>Copie o <b>Client ID</b> e cole no campo acima.</li>
-    </ol>
-   </details>
-   <p class="hint" style="margin-top:2px">O app salva um arquivo <code>diario_aulas_sync.json</code> no seu Google Drive. Só você tem acesso. Para hospedar gratuitamente: crie um repositório no GitHub, envie este arquivo como <code>index.html</code> e ative o GitHub Pages em Configurações — assim o login Google funciona em qualquer aparelho.</p>
+    ${conectado?"Conectado ao banco do Supabase":"Não conectado"}</div>
+   <div class="field"><label>Project URL</label>
+    <input type="text" id="spUrl" value="${esc(S.url)}" placeholder="https://xyz.supabase.co"></div>
+   <div class="field"><label>Anon Key / Public API Key</label>
+    <input type="password" id="spKey" value="${esc(S.key)}" placeholder="eyJh..."></div>
+   
    ${conectado?
     `<div class="btn-row" style="margin-top:10px">
       <button class="btn btn-acc" onclick="syncAgora(true)">${ic("refresh",17)} Sincronizar agora</button>
-      <button class="btn btn-line" onclick="desconectarGoogle()">Desconectar</button>
+      <button class="btn btn-line" onclick="desconectarSupabase()">Desconectar</button>
      </div>`:
-    `<button class="btn btn-acc" style="margin-top:10px" onclick="conectarGoogle()">${ic("g",18)} Conectar com o Google</button>`}
+    `<button class="btn btn-acc" style="margin-top:10px" onclick="salvarCredenciaisSupabase()">${ic("db",18)} Salvar & Conectar</button>`}
   </div>
-  <div class="sec-title">Sincronização manual (alternativa sem login)</div>
+  <div class="sec-title">Sincronização manual (alternativa sem nuvem)</div>
   <div class="card">
    <label class="check"><input type="checkbox" id="chkFotosSync" checked> Incluir fotos no código</label>
    <button class="btn btn-sec" onclick="gerarCodigo()">${ic("up",17)} Gerar código deste aparelho</button>
@@ -790,6 +779,7 @@ function renderConfig(){
 $("#restoreInput").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)restaurarBackup(f);});
 
 /* ================= INIT ================= */
+initSupabase();
 render();
 </script>
 </body>
