@@ -341,6 +341,32 @@ function realizadasNoMes(t){const ym=todayISO().slice(0,7);let c=0;aulasDaTurmaG
 const KEY="dav1_state";
 let state=load();
 function novoCronograma(){return CRONOGRAMA_INICIAL.map(a=>({...a}));}
+function normalizarTexto(v){return String(v||"").replace(/\s+/g," ").trim().toLowerCase();}
+function hashId(texto){let h=2166136261;for(let i=0;i<texto.length;i++){h^=texto.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
+function idDataDeterministico(aulaId,d){return "d"+hashId(aulaId+"|"+(d.data||"")+"|"+normalizarTexto(d.obs||""));}
+function assinaturaData(d){return (d.data||"")+"|"+normalizarTexto(d.obs||"");}
+function normalizarDatas(datas,aulaId){
+ const out=[],porId=new Map(),porAssinatura=new Map();
+ (Array.isArray(datas)?datas:[]).forEach((raw)=>{
+  const d={...raw,data:raw&&raw.data||"",obs:raw&&raw.obs||"",fotos:Array.isArray(raw&&raw.fotos)?raw.fotos:[]};
+  const ass=assinaturaData(d);const id=String(d.id||"");
+  let atual=(id&&porId.get(id))||porAssinatura.get(ass);
+  if(!atual){
+   d.id=id||idDataDeterministico(aulaId,d);atual=d;out.push(atual);porId.set(d.id,atual);porAssinatura.set(ass,atual);
+  }else{
+   const fotos=new Map((atual.fotos||[]).map(f=>[f.id||f.src,f]));
+   d.fotos.forEach(f=>{const k=f.id||f.src;if(k&&!fotos.has(k))fotos.set(k,f);});
+   atual.fotos=[...fotos.values()];
+   if((Number(d.u)||0)>(Number(atual.u)||0)){if(d.obs)atual.obs=d.obs;if(d.data)atual.data=d.data;atual.u=d.u;}
+  }
+ });
+ return out;
+}
+function registroIndevidoConhecido(r){
+ const datas=Array.isArray(r&&r.datas)?r.datas:[];
+ const obs=String(r&&r.obs||"");
+ return datas.some(d=>d.data==="2026-10-13"&&normalizarTexto(d.obs)==="repassar conteúdo para outras turmas. correção: trabalho aplicado.")||normalizarTexto(obs)==="repassar conteúdo para outras turmas. correção: trabalho aplicado."||normalizarTexto(obs)==="10 grupos. não falei das patologias.";
+}
 function normalizarEstado(s){
  if(!s||!s.turmas)return defaultState();
  if(!Array.isArray(s.cronograma)||!s.cronograma.length){s.cronograma=novoCronograma();s.cronogramaU=s.updatedAt||Date.now();}
@@ -350,32 +376,23 @@ function normalizarEstado(s){
   if(!s.turmas[t.id])s.turmas[t.id]={aulas:{}};
   const old=s.turmas[t.id].aulas||{};const novo={};
   Object.keys(old).forEach(k=>{
-   const rec=old[k];
-   let id=ids.includes(k)?k:null;
+   const rec=old[k]||{};if(registroIndevidoConhecido(rec))return;let id=ids.includes(k)?k:null;
    if(!id&&/^\d+$/.test(k))id=ids[parseInt(k,10)-1];
    if(!id)return;
-   const r={...rec,status:["Pendente","Em andamento","Realizada"].includes(rec.status)?rec.status:(rec.status==="Realizada"?"Realizada":"Pendente"),datas:Array.isArray(rec.datas)?rec.datas:[],fotos:Array.isArray(rec.fotos)?rec.fotos:[]};
-   if(rec.data||rec.obs){r.datas.push({id:uid(),data:rec.data||"",obs:rec.obs||"",fotos:[]});}
-   if(rec.fotos&&r.datas.length){r.datas[0].fotos=r.fotos;r.fotos=[];}
-   delete r.data;delete r.obs;
-   novo[id]=r;
+   const r={...rec,status:["Pendente","Em andamento","Realizada"].includes(rec.status)?rec.status:"Pendente",datas:Array.isArray(rec.datas)?rec.datas:[],fotos:Array.isArray(rec.fotos)?rec.fotos:[]};
+   if(rec.data||rec.obs)r.datas.push({id:idDataDeterministico(id,{data:rec.data||"",obs:rec.obs||""}),data:rec.data||"",obs:rec.obs||"",fotos:[]});
+   if(rec.fotos&&r.datas.length){r.datas[0].fotos=[...(r.datas[0].fotos||[]),...r.fotos];r.fotos=[];}
+   r.datas=normalizarDatas(r.datas,id);delete r.data;delete r.obs;
+   novo[id]=novo[id]?mergeRecord(novo[id],r):r;
   });
   s.turmas[t.id].aulas=novo;
  });
- s.v=3;return s;
+ s.v=4;return s;
 }
 function defaultState(){
  const t={};TURMAS.forEach(x=>t[x.id]={aulas:{}});
- const pre={
-  lorena_seg:{1:{status:"Realizada",data:"2026-10-13",obs:"Repassar conteúdo para outras turmas. Correção: trabalho aplicado."}},
-  guara_sex:{1:{status:"Realizada",data:"",obs:""},2:{status:"Realizada",data:"",obs:"10 grupos. Não falei das patologias."}},
-  guara_sab09:{1:{status:"Realizada",data:"",obs:""}},
-  guara_sab11:{1:{status:"Realizada",data:"",obs:""}},
-  lorena_sab15:{1:{status:"Realizada",data:"",obs:""}}
- };
  const cronograma=novoCronograma();
- for(const tid in pre)for(const n in pre[tid]){const id=cronograma[Number(n)-1]?.id;if(id)t[tid].aulas[id]=Object.assign({datas:[],fotos:[]},pre[tid][n],{datas:pre[tid][n].data?[{id:uid(),data:pre[tid][n].data,obs:pre[tid][n].obs||"",fotos:[]}]:[]});}
- return {v:3,updatedAt:Date.now(),cronograma,cronogramaU:Date.now(),turmas:t};
+ return {v:4,updatedAt:Date.now(),cronograma,cronogramaU:Date.now(),turmas:t};
 }
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.turmas)return normalizarEstado(s);}catch(e){}return defaultState();}
 function save(){state.updatedAt=Date.now();
@@ -432,9 +449,9 @@ async function gapi(path,opts={}){
  if(!r.ok)throw{status:r.status};return r;}
 async function driveFind(){
  const q=encodeURIComponent("name='diario_aulas_sync.json' and trashed=false");
- const r=await gapi("/files?q="+q+"&fields=files(id,modifiedTime)&pageSize=1");
- const j=await r.json();
- if(j.files&&j.files.length){G.fileId=j.files[0].id;localStorage.setItem("dav_file_id",G.fileId);return j.files[0];}
+ const r=await gapi("/files?q="+q+"&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=10");
+ const j=await r.json();const files=j.files||[];
+ if(files.length){const escolhido=files.find(f=>f.id===G.fileId)||files[0];G.fileId=escolhido.id;localStorage.setItem("dav_file_id",G.fileId);return escolhido;}
  return null;}
 async function driveDownload(){const f=await driveFind();if(!f)return null;
  const r=await gapi("/files/"+f.id+"?alt=media");const txt=await r.text();
@@ -453,27 +470,22 @@ async function driveUpload(data){
 function mergeRecord(cur,remote){
  const c=cur?JSON.parse(JSON.stringify(cur)):{status:"Pendente",datas:[],fotos:[]};
  const r=remote?JSON.parse(JSON.stringify(remote)):{status:"Pendente",datas:[],fotos:[]};
- c.datas=Array.isArray(c.datas)?c.datas:[]; r.datas=Array.isArray(r.datas)?r.datas:[];
- c.fotos=Array.isArray(c.fotos)?c.fotos:[]; r.fotos=Array.isArray(r.fotos)?r.fotos:[];
- const cu=Number(c.u||0), ru=Number(r.u||0);
- if(ru>=cu && r.status)c.status=r.status;
- c.u=Math.max(cu,ru);
- const byId=new Map(c.datas.map((d,i)=>[d.id||("legacy_"+i),d]));
- r.datas.forEach((rd,idx)=>{
-  const key=rd.id||("remote_"+idx+"_"+(rd.data||"")); let ld=byId.get(key);
-  if(!ld){ld={id:rd.id||uid(),data:rd.data||"",obs:rd.obs||"",fotos:[],u:Number(rd.u||ru||Date.now())};c.datas.push(ld);byId.set(key,ld);}
-  const lu=Number(ld.u||0), du=Number(rd.u||ru||0);
-  if(!ld.data&&rd.data)ld.data=rd.data; else if(du>lu&&rd.data)ld.data=rd.data;
-  if(!ld.obs&&rd.obs)ld.obs=rd.obs;
-  else if(rd.obs&&ld.obs!==rd.obs&&du>lu)ld.obs=rd.obs;
-  else if(rd.obs&&ld.obs!==rd.obs&&ld.obs.indexOf(rd.obs)<0&&rd.obs.indexOf(ld.obs)<0)ld.obs=ld.obs+"\n\n[Registro recuperado] "+rd.obs;
-  ld.u=Math.max(lu,du);
-  const photos=new Map((ld.fotos||[]).map(f=>[f.id||f.src,f]));
-  (rd.fotos||[]).forEach(f=>{const k=f.id||f.src;if(!photos.has(k))photos.set(k,f);});
-  ld.fotos=[...photos.values()];
+ c.datas=normalizarDatas(c.datas||[],"merge");r.datas=normalizarDatas(r.datas||[],"merge");
+ c.fotos=Array.isArray(c.fotos)?c.fotos:[];r.fotos=Array.isArray(r.fotos)?r.fotos:[];
+ const cu=Number(c.u||0),ru=Number(r.u||0);
+ if(ru>=cu&&r.status)c.status=r.status;c.u=Math.max(cu,ru);
+ const byId=new Map(),bySig=new Map();
+ c.datas.forEach(d=>{byId.set(d.id,d);bySig.set(assinaturaData(d),d);});
+ r.datas.forEach(rd=>{
+  const sig=assinaturaData(rd);let ld=byId.get(rd.id)||bySig.get(sig);
+  if(!ld){ld={...rd,id:rd.id||idDataDeterministico("merge",rd),fotos:Array.isArray(rd.fotos)?rd.fotos:[]};c.datas.push(ld);byId.set(ld.id,ld);bySig.set(sig,ld);return;}
+  const lu=Number(ld.u||0),du=Number(rd.u||ru||0);
+  if(!ld.data&&rd.data)ld.data=rd.data;else if(du>lu&&rd.data)ld.data=rd.data;
+  if(!ld.obs&&rd.obs)ld.obs=rd.obs;else if(rd.obs&&ld.obs!==rd.obs&&du>lu)ld.obs=rd.obs;
+  const photos=new Map((ld.fotos||[]).map(f=>[f.id||f.src,f]));(rd.fotos||[]).forEach(f=>{const k=f.id||f.src;if(k&&!photos.has(k))photos.set(k,f);});ld.fotos=[...photos.values()];ld.u=Math.max(lu,du);
  });
- const photos=new Map(c.fotos.map(f=>[f.id||f.src,f])); r.fotos.forEach(f=>{const k=f.id||f.src;if(!photos.has(k))photos.set(k,f);}); c.fotos=[...photos.values()];
- return c;
+ const photos=new Map(c.fotos.map(f=>[f.id||f.src,f]));r.fotos.forEach(f=>{const k=f.id||f.src;if(k&&!photos.has(k))photos.set(k,f);});c.fotos=[...photos.values()];
+ c.datas=normalizarDatas(c.datas,"merge");return c;
 }
 function salvarSnapshotSeguro(tag="antes-sync"){try{const raw=JSON.stringify(state);const packed=window.LZString?LZString.compressToBase64(raw):raw;const key="dav_safe_"+Date.now();localStorage.setItem(key,packed);const keys=Object.keys(localStorage).filter(k=>k.startsWith("dav_safe_")).sort();while(keys.length>3)localStorage.removeItem(keys.shift());localStorage.setItem("dav_safe_last",key);localStorage.setItem("dav_safe_tag",tag);}catch(e){}}
 function mesclar(inc){let novos=0;
@@ -653,6 +665,16 @@ function importarCodigo(){
  if(!inc||!inc.turmas){toast("Código inválido");return;}
  const novos=mesclar(inc);save();$("#codeIn").value="";toast(novos+" registro(s) importado(s)");render();}
 
+function limparDuplicacoes(){
+ if(!confirm("Primeiro faça um backup. Continuar com a limpeza das datas exatamente duplicadas?"))return;
+ let removidas=0;
+ TURMAS.forEach(t=>aulasDaTurmaGlobal().forEach(a=>{
+  const r=getRec(t.id,a.id);const antes=(r.datas||[]).length;r.datas=normalizarDatas(r.datas||[],a.id);removidas+=antes-r.datas.length;
+  if(antes!==r.datas.length)state.turmas[t.id].aulas[a.id]=r;
+ }));
+ save();renderConfig();toast(removidas?removidas+" duplicação(ões) removida(s)":"Nenhuma duplicação encontrada");
+}
+
 /* ================= EXPORTAR ================= */
 function turmasExport(){const v=$("#expTurma").value;return v==="todas"?TURMAS:[turmaById(v)];}
 function filtraPeriodo(t){const comp=$("#expCompleto").checked;const de=$("#expDe").value,ate=$("#expAte").value;const aulas=aulasDaTurmaGlobal();if(comp)return aulas;return aulas.filter(a=>{const r=getRec(t.id,a.id);return todasDatas(r).some(d=>(!de||d>=de)&&(!ate||d<=ate));});}
@@ -729,6 +751,11 @@ function renderConfig(){
    <div class="field" style="margin-top:12px"><label>Cole o código de outro aparelho</label>
    <textarea id="codeIn" class="code" placeholder="DAV1.…"></textarea></div>
    <button class="btn btn-sec" onclick="importarCodigo()">${ic("down",17)} Importar e mesclar</button>
+  </div>
+  <div class="sec-title">Limpeza segura</div>
+  <div class="card">
+   <p class="hint" style="margin-top:0">Remove apenas datas exatamente duplicadas dentro da mesma aula. Não apaga datas diferentes nem fotos. Faça um backup antes de usar.</p>
+   <button class="btn btn-sec" onclick="limparDuplicacoes()">Limpar duplicações de datas</button>
   </div>
   <div class="sec-title">Exportar</div>
   <div class="card">
