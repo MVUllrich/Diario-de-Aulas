@@ -635,14 +635,41 @@ function delFoto(tid,id,fid,di){if(!confirm("Apagar esta foto?"))return;const r=
 
 /* ================= GALERIA ================= */
 function renderGaleria(){
- const chips=`<button class="chip ${galTurma==="todas"?"active":""}" onclick="selGal('todas')">Todas</button>`+TURMAS.map(x=>`<button class="chip ${galTurma===x.id?"active":""}" onclick="selGal('${x.id}')">${esc(x.curta)}</button>`).join("");
- let items=[];TURMAS.filter(t=>galTurma==="todas"||t.id===galTurma).forEach(t=>{
-  aulasDaTurmaGlobal().forEach(a=>{const r=getRec(t.id,a.id);(r.fotos||[]).forEach(f=>items.push({...f,turma:t.curta,tid:t.id,aula:a.n,data:""}));(r.datas||[]).forEach(d=>(d.fotos||[]).forEach(f=>items.push({...f,turma:t.curta,tid:t.id,aula:a.n,idRec:a.id,data:d.data,di:r.datas.indexOf(d)})));});
- });
- const grid=items.length?`<div class="gal-grid">${items.map(f=>`<div class="gal-item"><img src="${f.src}"><span class="lbl">${esc(f.turma)} · Aula ${f.aula}${f.data?" · "+fmtData(f.data):""}</span><button class="del" onclick="delFoto('${f.tid}','${f.idRec\vert{}\vert{}aulasDaTurmaGlobal().find(a=>a.n===f.aula)?.id\vert{}\vert{}""}','${f.id}',${f.di!=null?f.di:"null"})">${ic("x",12)}</button></div>`).join("")}</div>`:`<div class="gal-empty">Nenhuma foto ainda.<br>Anexe fotos pelo diário de cada aula.</div>`;
- $("#app").innerHTML=`<div class="chips">${chips}</div>${grid}`;
+  const chips = `<button class="chip ${galTurma === "todas" ? "active" : ""}" onclick="selGal('todas')">Todas</button>` + 
+    TURMAS.map(x => `<button class="chip ${galTurma === x.id ? "active" : ""}" onclick="selGal('${x.id}')">${esc(x.curta)}</button>`).join("");
+  
+  let items = [];
+  TURMAS.filter(t => galTurma === "todas" || t.id === galTurma).forEach(t => {
+    aulasDaTurmaGlobal().forEach(a => {
+      const r = getRec(t.id, a.id);
+      (r.fotos || []).forEach(f => items.push({ ...f, turma: t.curta, tid: t.id, aula: a.n, data: "" }));
+      (r.datas || []).forEach(d => 
+        (d.fotos || []).forEach(f => items.push({ ...f, turma: t.curta, tid: t.id, aula: a.n, idRec: a.id, data: d.data, di: r.datas.indexOf(d) }))
+      );
+    });
+  });
+
+  const grid = items.length 
+    ? `<div class="gal-grid">${items.map(f => {
+        const idRecVal = f.idRec || (aulasDaTurmaGlobal().find(a => a.n === f.aula) ? aulasDaTurmaGlobal().find(a => a.n === f.aula).id : "");
+        const diVal = f.di != null ? f.di : "null";
+        const dataStr = f.data ? " · " + fmtData(f.data) : "";
+        return `<div class="gal-item">
+          <img src="${f.src}">
+          <span class="lbl">${esc(f.turma)} · Aula ${f.aula}${dataStr}</span>
+          <button class="del" onclick="delFoto('${f.tid}','${idRecVal}','${f.id}',${diVal})">${ic("x",12)}</button>
+        </div>`;
+      }).join("")}</div>`
+    : `<div class="gal-empty">Nenhuma foto ainda.<br>Anexe fotos pelo diário de cada aula.</div>`;
+
+  $("#app").innerHTML = `<div class="chips">${chips}</div>${grid}`;
 }
-function selGal(v){buzz(6);galTurma=v;renderGaleria();}
+
+function selGal(v){
+  buzz(6);
+  galTurma = v;
+  renderGaleria();
+}
 
 /* ================= SINCRONIZAÇÃO MANUAL ================= */
 function gerarCodigo(){
