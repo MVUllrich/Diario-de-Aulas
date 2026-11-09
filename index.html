@@ -212,7 +212,7 @@ details code{background:#eef1e6;padding:1px 5px;border-radius:5px;font-size:.72r
 .cal-week{font-size:.64rem;text-align:center;color:var(--muted);font-weight:800;padding:5px 0}
 .cal-day{min-height:55px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font:600 .75rem Inter,sans-serif;color:var(--ink)}
 .cal-day.out{opacity:.28;cursor:default;background:#f8f9f6}.cal-day.sel{outline:2px solid var(--acc);background:var(--acc-soft)}
-.cal-day.today{border-color:var(--acc)}.cal-dots{display:flex;gap:3px;min-height:7px}.cal-dot{width:7px;height:7px;border-radius:50%}.cal-dot.lor{background:#2878c7}.cal-dot.gua{background:#269b72}
+.cal-day.today{border-color:var(--acc)}.cal-dots{display:flex;gap:3px;min-height:7px;max-width:100%;justify-content:center;flex-wrap:wrap}.cal-dot{width:6px;height:6px;min-width:6px;border-radius:50%;display:inline-block}.cal-dot.lor{background:#2878c7}.cal-dot.gua{background:#269b72}
 .cal-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.72rem;color:var(--muted);margin-top:10px}
 .cal-legend span{display:flex;align-items:center;gap:6px}.cal-summary{display:grid;grid-template-columns:1fr 1fr;gap:9px}.cal-stat{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}.cal-stat small{display:block;color:var(--muted);font-size:.7rem;font-weight:700}.cal-stat strong{display:block;font-size:1.35rem;margin:4px 0}.cal-stat em{font-style:normal;font-size:.72rem;color:var(--muted)}
 .cal-event{border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:8px;background:#fff}.cal-event-top{display:flex;align-items:flex-start;gap:8px}.cal-city{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}.cal-event-main{flex:1;min-width:0}.cal-event-main b{font-size:.8rem}.cal-event-main small{display:block;color:var(--muted);font-size:.7rem;margin-top:3px}.pay-btn{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:700 .68rem Inter,sans-serif;cursor:pointer;background:#f5f6f2;color:var(--muted);white-space:nowrap}.pay-btn.paid{background:var(--ok-soft);color:var(--ok);border-color:#b9d5bd}
@@ -374,10 +374,26 @@ function normalizarDatas(datas,aulaId){
  });
  return out;
 }
-function registroIndevidoConhecido(r){
- const datas=Array.isArray(r&&r.datas)?r.datas:[];
- const obs=String(r&&r.obs||"");
- return datas.some(d=>d.data==="2026-10-13"&&normalizarTexto(d.obs)==="repassar conteúdo para outras turmas. correção: trabalho aplicado.")||normalizarTexto(obs)==="repassar conteúdo para outras turmas. correção: trabalho aplicado."||normalizarTexto(obs)==="10 grupos. não falei das patologias.";
+function limparFantasmasConhecidos(tid,aulaIndex,registro){
+ const r={...registro};
+ const obsGrupos="10 grupos. não falei das patologias.";
+ const obsRepassar="repassar conteúdo para outras turmas. correção: trabalho aplicado.";
+ r.datas=(Array.isArray(r.datas)?r.datas:[]).filter(d=>{
+  const data=String(d&&d.data||"");
+  const obs=normalizarTexto(d&&d.obs||"");
+  // Registros confirmados pelo professor como aulas que não aconteceram.
+  if(tid==="lorena_seg"&&aulaIndex===2&&data==="2026-10-04")return false;
+  if(tid==="lorena_sab15"&&aulaIndex===2&&data==="2026-10-17")return false;
+  if(tid==="guara_sab11"&&aulaIndex===2&&!data&&!obs&&!(d.fotos||[]).length)return false;
+  if(tid==="guara_sex"&&!data&&obs===obsGrupos)return false;
+  // Mantém a correção histórica já existente, sem apagar outras datas válidas da aula.
+  if(data==="2026-10-13"&&obs===obsRepassar)return false;
+  return true;
+ });
+ // Alguns registros antigos guardavam data/observação diretamente na aula, fora de datas[].
+ if(tid==="guara_sex"&&!r.data&&normalizarTexto(r.obs||"")===obsGrupos)delete r.obs;
+ if(normalizarTexto(r.obs||"")===obsRepassar&&!r.data)delete r.obs;
+ return r;
 }
 function normalizarEstado(s){
  if(!s||!s.turmas)return defaultState();
@@ -388,9 +404,11 @@ function normalizarEstado(s){
   if(!s.turmas[t.id])s.turmas[t.id]={aulas:{}};
   const old=s.turmas[t.id].aulas||{};const novo={};
   Object.keys(old).forEach(k=>{
-   const rec=old[k]||{};if(registroIndevidoConhecido(rec))return;let id=ids.includes(k)?k:null;
+   const recOriginal=old[k]||{};let id=ids.includes(k)?k:null;
    if(!id&&/^\d+$/.test(k))id=ids[parseInt(k,10)-1];
    if(!id)return;
+   const aulaIndex=ids.indexOf(id);
+   const rec=limparFantasmasConhecidos(t.id,aulaIndex,recOriginal);
    const r={...rec,status:["Pendente","Em andamento","Realizada"].includes(rec.status)?rec.status:"Pendente",datas:Array.isArray(rec.datas)?rec.datas:[],fotos:Array.isArray(rec.fotos)?rec.fotos:[]};
    if(rec.data||rec.obs)r.datas.push({id:idDataDeterministico(id,{data:rec.data||"",obs:rec.obs||""}),data:rec.data||"",obs:rec.obs||"",fotos:[]});
    if(rec.fotos&&r.datas.length){r.datas[0].fotos=[...(r.datas[0].fotos||[]),...r.fotos];r.fotos=[];}
@@ -757,7 +775,7 @@ function renderCalendario(){
   if(i<offset){day=prevDays-offset+i+1;inside=false;iso=y+"-"+pad(m)+"-"+pad(day);}
   else if(i>=offset+days){day=i-offset-days+1;inside=false;iso=y+"-"+pad(m+2)+"-"+pad(day);}
   else{day=i-offset+1;iso=ym+"-"+pad(day);}
-  const has=eventos.filter(e=>e.data===iso);const dots=[...new Set(has.map(e=>e.turma.cidade==="Lorena"?"lor":"gua"))];
+  const has=eventos.filter(e=>e.data===iso);const dots=has.map(e=>e.turma.cidade==="Lorena"?"lor":"gua");
   cells.push(`<button class="cal-day ${inside?"":"out"} ${calendarioDia===iso?"sel":""} ${iso===todayISO()?"today":""}" ${inside?`onclick="selecionarDiaCalendario('${iso}')"`:"disabled"}><span>${day}</span><span class="cal-dots">${dots.map(d=>`<i class="cal-dot ${d}"></i>`).join("")}</span></button>`);
  }
  const chosen=eventos.filter(e=>e.data===calendarioDia);
@@ -885,6 +903,8 @@ $("#restoreInput").addEventListener("change",e=>{const f=e.target.files[0];e.tar
 
 /* ================= INIT ================= */
 initSupabase();
+// Persiste a limpeza dos registros fantasmas também no armazenamento local.
+saveLocalOnly();
 render();
 </script>
 </body>
